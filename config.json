@@ -1,0 +1,16 @@
+{
+  "listen": ":8080",
+  "table_name": "wlt",
+  "chain_name": "mark_traffic",
+  "lan_interfaces": ["br-lan"],
+  "create_table": true,
+  "chain_priority": -150,
+  "cleanup_on_exit": true,
+  "state_path": "/var/lib/wlt/state.json",
+  "default_policy": "direct",
+  "policies": [
+    {"name": "direct", "mark": 1, "description": "Direct connection"},
+    {"name": "proxy",  "mark": 2, "description": "Route through proxy"},
+    {"name": "vpn",    "mark": 3, "description": "Route through VPN"}
+  ]
+}

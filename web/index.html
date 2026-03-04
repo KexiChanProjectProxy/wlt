@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WLT - Traffic Policy</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    color: #16213e;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .card h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+    margin-bottom: 12px;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.9rem;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { color: #888; }
+  .info-value { font-family: monospace; font-size: 0.85rem; word-break: break-all; text-align: right; max-width: 60%; }
+  .policy-grid {
+    display: grid;
+    gap: 10px;
+  }
+  .policy-card {
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .policy-card:hover { border-color: #4a90e2; background: #f7faff; }
+  .policy-card.active {
+    border-color: #4a90e2;
+    background: #eef5ff;
+  }
+  .policy-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #ccc;
+    flex-shrink: 0;
+  }
+  .policy-card.active .policy-dot { background: #4a90e2; }
+  .policy-info { flex: 1; }
+  .policy-name { font-weight: 600; font-size: 0.95rem; }
+  .policy-desc { font-size: 0.8rem; color: #888; margin-top: 2px; }
+  .policy-mark { font-size: 0.75rem; color: #bbb; font-family: monospace; }
+  .status {
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .status.ok { background: #e8f5e9; color: #2e7d32; }
+  .status.err { background: #ffebee; color: #c62828; }
+  .status.info { background: #e3f2fd; color: #1565c0; }
+  .loading { text-align: center; color: #888; padding: 40px; }
+  .ip-list { font-family: monospace; font-size: 0.82rem; }
+  .ip-item { display: block; padding: 2px 0; }
+  .ip-v4 { color: #1565c0; }
+  .ip-v6 { color: #6a1b9a; }
+</style>
+</head>
+<body>
+<h1>WLT Traffic Policy</h1>
+<div id="status"></div>
+<div id="app"><div class="loading">Loading...</div></div>
+
+<script>
+let deviceData = null;
+let policies = [];
+let applying = false;
+
+async function load() {
+  try {
+    const [devRes, polRes] = await Promise.all([
+      fetch('/api/device'),
+      fetch('/api/policies')
+    ]);
+    if (!devRes.ok) throw new Error('Failed to load device info');
+    if (!polRes.ok) throw new Error('Failed to load policies');
+    deviceData = await devRes.json();
+    policies = await polRes.json();
+    render();
+  } catch (e) {
+    showStatus('Error: ' + e.message, 'err');
+    document.getElementById('app').innerHTML = '';
+  }
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + (type || 'info');
+  el.textContent = msg;
+  if (type === 'ok') setTimeout(() => { el.textContent = ''; el.className = ''; }, 3000);
+}
+
+function render() {
+  const dev = deviceData;
+  const app = document.getElementById('app');
+
+  const allIPs = [
+    ...(dev.ipv4s || []).map(ip => `<span class="ip-item ip-v4">${ip}</span>`),
+    ...(dev.ipv6s || []).map(ip => `<span class="ip-item ip-v6">${ip}</span>`)
+  ].join('') || '<span class="ip-item" style="color:#bbb">none</span>';
+
+  const policyCards = policies.map(p => {
+    const active = p.name === dev.policy ? 'active' : '';
+    return `
+      <div class="policy-card ${active}" onclick="setPolicy('${p.name}')">
+        <div class="policy-dot"></div>
+        <div class="policy-info">
+          <div class="policy-name">${p.name}</div>
+          <div class="policy-desc">${p.description || ''}</div>
+        </div>
+        <div class="policy-mark">mark ${p.mark}</div>
+      </div>
+    `;
+  }).join('');
+
+  app.innerHTML = `
+    <div class="card">
+      <h2>Device Info</h2>
+      <div class="info-row">
+        <span class="info-label">Source IP</span>
+        <span class="info-value">${dev.source_ip || '-'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">MAC Address</span>
+        <span class="info-value">${dev.mac || 'unknown'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">All Addresses</span>
+        <span class="info-value"><span class="ip-list">${allIPs}</span></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Current Policy</span>
+        <span class="info-value" style="font-weight:600;color:#4a90e2">${dev.policy || '-'}</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Select Policy</h2>
+      <div class="policy-grid">${policyCards}</div>
+    </div>
+  `;
+}
+
+async function setPolicy(name) {
+  if (applying) return;
+  if (deviceData && deviceData.policy === name) return;
+  applying = true;
+  showStatus('Applying policy: ' + name + '...', 'info');
+  try {
+    const res = await fetch('/api/policy', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({policy: name})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    deviceData = data;
+    render();
+    showStatus('Policy set to: ' + name, 'ok');
+  } catch (e) {
+    showStatus('Error: ' + e.message, 'err');
+  } finally {
+    applying = false;
+  }
+}
+
+load();
+</script>
+</body>
+</html>
