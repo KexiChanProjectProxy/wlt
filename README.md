@@ -1,4 +1,4 @@
-# wlt — 流量策略守护进程
+# 网络通（wlt）
 
 基于 nftables 的局域网流量标记守护进程，带有 Web 管理界面。通过 MAC 地址识别设备，为每台设备设置 nftables 数据包标记（`meta mark`），供下游路由规则（如策略路由、WireGuard 分流）使用。
 
@@ -230,7 +230,7 @@ sudo nft list set netdev wlt wlt_vpn_mac
 
 ## 与路由规则集成
 
-wlt 只负责打标记，实际的路由分流由系统路由规则完成。以 WireGuard 为例：
+网络通只负责打标记，实际的路由分流由系统路由规则完成。以 WireGuard 为例：
 
 ```bash
 # 对 mark=3（vpn 策略）的流量走 VPN 路由表
