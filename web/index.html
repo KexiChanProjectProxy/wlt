@@ -176,6 +176,10 @@ function render() {
     <div class="card">
       <h2>Select Policy</h2>
       <div class="policy-grid">${policyCards}</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:0.85rem;color:#555;cursor:pointer;user-select:none">
+        <input type="checkbox" id="flushCt" checked style="width:16px;height:16px;accent-color:#4a90e2">
+        Interrupt existing connections
+      </label>
     </div>
   `;
 }
@@ -189,7 +193,7 @@ async function setPolicy(name) {
     const res = await fetch('/api/policy', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({policy: name})
+      body: JSON.stringify({policy: name, flush_conntrack: document.getElementById('flushCt')?.checked ?? true})
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');

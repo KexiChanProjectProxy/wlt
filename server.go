@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 )
 
 type Server struct {
@@ -206,7 +209,35 @@ func (s *Server) handlePolicies(w http.ResponseWriter, r *http.Request) {
 }
 
 type setPolicyRequest struct {
-	Policy string `json:"policy"`
+	Policy         string `json:"policy"`
+	FlushConntrack bool   `json:"flush_conntrack"`
+}
+
+func flushConntrack(ipv4s []net.IP, ipv6s []net.IP) (uint, error) {
+	var total uint
+	for _, ip := range ipv4s {
+		f := &netlink.ConntrackFilter{}
+		if err := f.AddIP(netlink.ConntrackOrigSrcIP, ip); err != nil {
+			return total, err
+		}
+		n, err := netlink.ConntrackDeleteFilters(netlink.ConntrackTable, unix.AF_INET, f)
+		total += n
+		if err != nil {
+			return total, err
+		}
+	}
+	for _, ip := range ipv6s {
+		f := &netlink.ConntrackFilter{}
+		if err := f.AddIP(netlink.ConntrackOrigSrcIP, ip); err != nil {
+			return total, err
+		}
+		n, err := netlink.ConntrackDeleteFilters(netlink.ConntrackTable, unix.AF_INET6, f)
+		total += n
+		if err != nil {
+			return total, err
+		}
+	}
+	return total, nil
 }
 
 func (s *Server) handleSetPolicy(w http.ResponseWriter, r *http.Request) {
@@ -261,6 +292,15 @@ func (s *Server) handleSetPolicy(w http.ResponseWriter, r *http.Request) {
 	if err := s.nft.SetDevicePolicy(mac, oldPolicy, req.Policy); err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("nft error: %v", err))
 		return
+	}
+
+	if req.FlushConntrack {
+		n, err := flushConntrack(ipv4s, ipv6s)
+		if err != nil {
+			fmt.Printf("warn: flush conntrack for %s: %v\n", macStr, err)
+		} else if n > 0 {
+			fmt.Printf("info: flushed %d conntrack entries for %s\n", n, macStr)
+		}
 	}
 
 	dev := &DeviceState{
