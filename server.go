@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -41,8 +42,13 @@ func NewServer(cfg *Config, state *State, nft devicePolicySetter) *Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleIndex)
 	mux.HandleFunc("/api/device", s.handleDevice)
+	mux.HandleFunc("/api/features", s.handleFeatures)
 	mux.HandleFunc("/api/policies", s.handlePolicies)
 	mux.HandleFunc("/api/policy", s.handleSetPolicy)
+	if cfg.AdminPSK != "" {
+		mux.Handle("/api/admin/device", s.adminOnly(http.HandlerFunc(s.handleAdminDevice)))
+		mux.Handle("/api/admin/policy", s.adminOnly(http.HandlerFunc(s.handleAdminSetPolicy)))
+	}
 	s.handler = mux
 	return s
 }
@@ -66,6 +72,10 @@ type deviceResponse struct {
 	IPv4s    []string `json:"ipv4s"`
 	IPv6s    []string `json:"ipv6s"`
 	Policy   string   `json:"policy"`
+}
+
+type featuresResponse struct {
+	AdminEnabled bool `json:"admin_enabled"`
 }
 
 func (s *Server) detectDevice(r *http.Request) (*DeviceState, error) {
@@ -135,6 +145,46 @@ type deviceTarget struct {
 	mac      net.HardwareAddr
 	sourceIP net.IP
 	explicit bool
+}
+
+const (
+	publicDeviceSelectorError = "ip/mac selectors are only supported on /api/admin/device"
+	publicPolicySelectorError = "ip/mac selectors are only supported on /api/admin/policy"
+	adminAuthError            = "missing or invalid X-WLT-PSK"
+)
+
+func hasSelector(macValue, ipValue string) bool {
+	return macValue != "" || ipValue != ""
+}
+
+func requireExactSelector(macValue, ipValue string) error {
+	if (macValue == "" && ipValue == "") || (macValue != "" && ipValue != "") {
+		return fmt.Errorf("exactly one of mac or ip must be specified")
+	}
+	return nil
+}
+
+func requireIPSelector(macValue, ipValue string) error {
+	if ipValue == "" {
+		if macValue != "" {
+			return fmt.Errorf("admin routes only support ip selectors")
+		}
+		return fmt.Errorf("ip selector is required")
+	}
+	if macValue != "" {
+		return fmt.Errorf("admin routes only support ip selectors")
+	}
+	return nil
+}
+
+func (s *Server) adminOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if subtle.ConstantTimeCompare([]byte(r.Header.Get("X-WLT-PSK")), []byte(s.cfg.AdminPSK)) != 1 {
+			writeError(w, http.StatusUnauthorized, adminAuthError)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) findStateByIP(ip net.IP) *DeviceState {
@@ -299,6 +349,10 @@ func (s *Server) handleDevice(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	if hasSelector(r.URL.Query().Get("mac"), r.URL.Query().Get("ip")) {
+		writeError(w, http.StatusBadRequest, publicDeviceSelectorError)
+		return
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -372,6 +426,46 @@ func (s *Server) handleDevice(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+func (s *Server) handleAdminDevice(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if err := requireIPSelector(r.URL.Query().Get("mac"), r.URL.Query().Get("ip")); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	target, err := s.parseSelector("", r.URL.Query().Get("ip"))
+	if err != nil {
+		if target != nil && target.sourceIP != nil && target.mac == nil {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if target == nil || target.mac == nil {
+		writeError(w, http.StatusNotFound, errString(err, "device not found"))
+		return
+	}
+
+	dev := s.buildDeviceState(target.mac, target.sourceIP)
+	resp := deviceResponse{
+		MAC:    dev.MAC,
+		IPv4s:  dev.IPv4s,
+		IPv6s:  dev.IPv6s,
+		Policy: dev.Policy,
+	}
+	if target.sourceIP != nil {
+		resp.SourceIP = target.sourceIP.String()
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
 type policyResponse struct {
 	Name        string `json:"name"`
 	Mark        uint32 `json:"mark"`
@@ -389,6 +483,15 @@ func (s *Server) handlePolicies(w http.ResponseWriter, r *http.Request) {
 		resp[i] = policyResponse{Name: p.Name, Mark: p.Mark, Description: p.Description}
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func (s *Server) handleFeatures(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, featuresResponse{AdminEnabled: s.cfg.AdminPSK != ""})
 }
 
 type setPolicyRequest struct {
@@ -434,6 +537,10 @@ func (s *Server) handleSetPolicy(w http.ResponseWriter, r *http.Request) {
 	var req setPolicyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if hasSelector(req.MAC, req.IP) {
+		writeError(w, http.StatusBadRequest, publicPolicySelectorError)
 		return
 	}
 
@@ -494,4 +601,93 @@ func (s *Server) handleSetPolicy(w http.ResponseWriter, r *http.Request) {
 		resp.SourceIP = target.sourceIP.String()
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func (s *Server) handleAdminSetPolicy(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	var req setPolicyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if err := requireIPSelector(req.MAC, req.IP); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if s.cfg.PolicyByName(req.Policy) == nil {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("unknown policy: %q", req.Policy))
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	target, err := s.parseSelector("", req.IP)
+	if err != nil {
+		if target != nil && target.sourceIP != nil && target.mac == nil {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if target == nil || target.mac == nil {
+		writeError(w, http.StatusNotFound, errString(err, "device not found"))
+		return
+	}
+
+	dev := s.buildDeviceState(target.mac, target.sourceIP)
+	if existing := s.state.Get(dev.MAC); existing != nil {
+		dev.LastSeen = existing.LastSeen
+	} else {
+		dev.LastSeen = time.Time{}
+	}
+
+	oldPolicy := ""
+	if existing := s.state.Get(dev.MAC); existing != nil {
+		oldPolicy = existing.Policy
+	}
+
+	if err := s.nft.SetDevicePolicy(target.mac, oldPolicy, req.Policy); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("nft error: %v", err))
+		return
+	}
+
+	if req.FlushConntrack {
+		n, err := flushConntrackFunc(parseIPStrings(dev.IPv4s), parseIPStrings(dev.IPv6s))
+		if err != nil {
+			fmt.Printf("warn: flush conntrack for %s: %v\n", dev.MAC, err)
+		} else if n > 0 {
+			fmt.Printf("info: flushed %d conntrack entries for %s\n", n, dev.MAC)
+		}
+	}
+
+	dev.Policy = req.Policy
+	s.state.Set(dev)
+
+	if err := s.state.Save(s.cfg.StatePath); err != nil {
+		fmt.Printf("warn: save state: %v\n", err)
+	}
+
+	resp := deviceResponse{
+		MAC:    dev.MAC,
+		IPv4s:  dev.IPv4s,
+		IPv6s:  dev.IPv6s,
+		Policy: req.Policy,
+	}
+	if target.sourceIP != nil {
+		resp.SourceIP = target.sourceIP.String()
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func errString(err error, fallback string) string {
+	if err != nil {
+		return err.Error()
+	}
+	return fallback
 }

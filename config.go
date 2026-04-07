@@ -13,16 +13,17 @@ type Policy struct {
 }
 
 type Config struct {
-	Listen          string   `json:"listen"`
-	TableName       string   `json:"table_name"`
-	ChainName       string   `json:"chain_name"`
-	LanInterfaces   []string `json:"lan_interfaces"`
-	CreateTable     bool     `json:"create_table"`
-	ChainPriority   int32    `json:"chain_priority"`
-	CleanupOnExit   bool     `json:"cleanup_on_exit"`
-	StatePath       string   `json:"state_path"`
-	DefaultPolicy   string   `json:"default_policy"`
-	Policies        []Policy `json:"policies"`
+	Listen        string   `json:"listen"`
+	TableName     string   `json:"table_name"`
+	ChainName     string   `json:"chain_name"`
+	LanInterfaces []string `json:"lan_interfaces"`
+	CreateTable   bool     `json:"create_table"`
+	ChainPriority int32    `json:"chain_priority"`
+	CleanupOnExit bool     `json:"cleanup_on_exit"`
+	StatePath     string   `json:"state_path"`
+	AdminPSK      string   `json:"admin_psk"`
+	DefaultPolicy string   `json:"default_policy"`
+	Policies      []Policy `json:"policies"`
 }
 
 func LoadConfig(path string) (*Config, error) {

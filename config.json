@@ -7,6 +7,7 @@
   "chain_priority": -150,
   "cleanup_on_exit": true,
   "state_path": "/var/lib/wlt/state.json",
+  "admin_psk": "change-me-to-a-long-random-string",
   "default_policy": "direct",
   "policies": [
     {"name": "direct", "mark": 1, "description": "Direct connection"},
