@@ -84,6 +84,7 @@ wlt/
   "chain_priority": -150,
   "cleanup_on_exit": true,
   "state_path": "/var/lib/wlt/state.json",
+  "admin_psk": "change-me-to-a-long-random-string",
   "default_policy": "direct",
   "policies": [
     {"name": "direct", "mark": 1, "description": "直接连接"},
@@ -105,6 +106,7 @@ wlt/
 | `chain_priority` | int32 | chain 优先级，`-150` 在 conntrack 之前 |
 | `cleanup_on_exit` | bool | 退出时是否清空 set 元素（恢复无标记状态） |
 | `state_path` | string | 设备策略状态文件路径 |
+| `admin_psk` | string | 管理接口使用的预共享密钥，请通过 `X-WLT-PSK` 请求头传入。为空时管理接口禁用 |
 | `default_policy` | string | 新设备首次访问时自动分配的策略名 |
 | `policies` | []Policy | 策略列表，见下表 |
 
@@ -145,11 +147,18 @@ wlt/
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | `GET` | `/` | Web 管理界面（内嵌 HTML） |
-| `GET` | `/api/device` | 返回当前请求设备的信息和策略 |
-| `GET` | `/api/policies` | 返回所有可用策略列表 |
-| `POST` | `/api/policy` | 为当前设备设置策略 |
 
 设备识别完全自动：服务端从 `RemoteAddr` 提取 IP，查询内核 ARP/NDP 邻居表得到 MAC，不需要客户端提供任何标识信息。
+
+### 公开自助接口
+
+以下接口始终基于当前请求来源 IP 识别设备，不需要认证，适合设备自助查看和切换自己的策略。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `GET` | `/api/device` | 返回当前请求设备的信息和策略 |
+| `GET` | `/api/policies` | 返回所有可用策略列表 |
+| `POST` | `/api/policy` | 为当前请求设备设置策略 |
 
 ### GET /api/device
 
@@ -176,6 +185,31 @@ wlt/
 ```
 
 响应：同 `/api/device`，包含更新后的策略。
+
+### 管理接口
+
+以下接口用于远程管理指定设备，要求请求头携带 `X-WLT-PSK`。当 `admin_psk` 为空字符串时，这些接口不会启用。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `GET` | `/api/admin/device?ip=...` | 按 IP 查询指定设备的信息和策略 |
+| `POST` | `/api/admin/policy` | 为指定设备设置策略 |
+
+查询指定 IP 的设备：
+
+```bash
+curl -H 'X-WLT-PSK: change-me-to-a-long-random-string' \
+  'http://127.0.0.1:8080/api/admin/device?ip=192.168.1.100'
+```
+
+为指定 IP 设置策略：
+
+```bash
+curl -X POST 'http://127.0.0.1:8080/api/admin/policy' \
+  -H 'Content-Type: application/json' \
+  -H 'X-WLT-PSK: change-me-to-a-long-random-string' \
+  -d '{"ip":"192.168.1.100","policy":"proxy"}'
+```
 
 错误时返回 HTTP 4xx/5xx 及 `{"error": "..."}` 消息体。
 
