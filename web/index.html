@@ -5,53 +5,134 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WLT - Traffic Policy</title>
 <style>
+  :root {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface-subtle: #fbfdff;
+    --text: #1a1a2e;
+    --text-muted: #6b7280;
+    --text-soft: #888;
+    --border: #e0e0e0;
+    --border-soft: #f0f0f0;
+    --primary: #4a90e2;
+    --primary-soft: #eef5ff;
+    --primary-tint: #f7faff;
+    --admin-border: #d7e6ff;
+    --admin-surface: #f4f8ff;
+    --ok-bg: #e8f5e9;
+    --ok-text: #2e7d32;
+    --err-bg: #ffebee;
+    --err-text: #c62828;
+    --info-bg: #e3f2fd;
+    --info-text: #1565c0;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #f0f2f5;
-    color: #1a1a2e;
+    background: var(--bg);
+    color: var(--text);
     min-height: 100vh;
     padding: 20px;
   }
+
   h1 {
     text-align: center;
     font-size: 1.5rem;
     margin-bottom: 20px;
     color: #16213e;
   }
+
   .card {
-    background: #fff;
+    background: var(--surface);
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: var(--shadow);
     max-width: 480px;
     margin-left: auto;
     margin-right: auto;
   }
+
+  .admin-card {
+    border: 1px solid var(--admin-border);
+    background: linear-gradient(180deg, var(--surface-subtle) 0%, var(--admin-surface) 100%);
+  }
+
+  .card-tag {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 4px 10px;
+    margin-bottom: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .card-tag.self {
+    background: #edf4ff;
+    color: #285ea8;
+  }
+
+  .card-tag.admin {
+    background: #dfeaff;
+    color: #114ba4;
+  }
+
+  .card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #16213e;
+    margin-bottom: 8px;
+  }
+
+  .card-copy {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
   .card h2 {
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #888;
+    color: var(--text-soft);
     margin-bottom: 12px;
   }
+
   .info-row {
     display: flex;
     justify-content: space-between;
+    gap: 12px;
     padding: 6px 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-soft);
     font-size: 0.9rem;
   }
+
   .info-row:last-child { border-bottom: none; }
-  .info-label { color: #888; }
-  .info-value { font-family: monospace; font-size: 0.85rem; word-break: break-all; text-align: right; max-width: 60%; }
+
+  .info-label { color: var(--text-soft); }
+
+  .info-value {
+    font-family: monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
+    text-align: right;
+    max-width: 60%;
+  }
+
   .policy-grid {
     display: grid;
     gap: 10px;
   }
+
   .policy-card {
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--border);
     border-radius: 10px;
     padding: 14px 16px;
     cursor: pointer;
@@ -60,22 +141,45 @@
     align-items: center;
     gap: 12px;
   }
-  .policy-card:hover { border-color: #4a90e2; background: #f7faff; }
-  .policy-card.active {
-    border-color: #4a90e2;
-    background: #eef5ff;
+
+  .policy-card:hover {
+    border-color: var(--primary);
+    background: var(--primary-tint);
   }
+
+  .policy-card.active {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+  }
+
+  .policy-card.disabled {
+    cursor: default;
+    opacity: 0.72;
+  }
+
+  .policy-card.disabled:hover {
+    border-color: var(--border);
+    background: transparent;
+  }
+
   .policy-dot {
-    width: 12px; height: 12px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: #ccc;
     flex-shrink: 0;
   }
-  .policy-card.active .policy-dot { background: #4a90e2; }
+
+  .policy-card.active .policy-dot { background: var(--primary); }
+
   .policy-info { flex: 1; }
+
   .policy-name { font-weight: 600; font-size: 0.95rem; }
-  .policy-desc { font-size: 0.8rem; color: #888; margin-top: 2px; }
+
+  .policy-desc { font-size: 0.8rem; color: var(--text-soft); margin-top: 2px; }
+
   .policy-mark { font-size: 0.75rem; color: #bbb; font-family: monospace; }
+
   .status {
     text-align: center;
     padding: 10px;
@@ -86,15 +190,117 @@
     margin-left: auto;
     margin-right: auto;
   }
-  .status.ok { background: #e8f5e9; color: #2e7d32; }
-  .status.err { background: #ffebee; color: #c62828; }
-  .status.info { background: #e3f2fd; color: #1565c0; }
-  .loading { text-align: center; color: #888; padding: 40px; }
+
+  .status.ok { background: var(--ok-bg); color: var(--ok-text); }
+  .status.err { background: var(--err-bg); color: var(--err-text); }
+  .status.info { background: var(--info-bg); color: var(--info-text); }
+
+  .inline-status {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .loading { text-align: center; color: var(--text-soft); padding: 40px; }
   .ip-list { font-family: monospace; font-size: 0.82rem; }
   .ip-item { display: block; padding: 2px 0; }
   .ip-v4 { color: #1565c0; }
   .ip-v6 { color: #6a1b9a; }
-</style>
+  .ip-empty { color: #bbb; }
+
+  .field-grid {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .field-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #526175;
+  }
+
+  .text-input {
+    width: 100%;
+    border: 1px solid #cfd7e3;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    color: var(--text);
+    background: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .text-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.14);
+  }
+
+  .action-button {
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #244f9e 0%, var(--primary) 100%);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    box-shadow: 0 8px 18px rgba(74, 144, 226, 0.2);
+  }
+
+  .action-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(74, 144, 226, 0.24);
+  }
+
+  .action-button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .admin-panel {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(17, 75, 164, 0.12);
+  }
+
+  .empty-state {
+    border: 1px dashed #c8d7f1;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    text-align: center;
+    color: #526175;
+    background: rgba(255,255,255,0.72);
+  }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 0.85rem;
+    color: #555;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .checkbox-row input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+  }
+  </style>
 </head>
 <body>
 <h1>WLT Traffic Policy</h1>
@@ -105,17 +311,86 @@
 let deviceData = null;
 let policies = [];
 let applying = false;
+let adminEnabled = false;
+let selfState = {
+  flushConntrack: true
+};
+let adminState = {
+  psk: '',
+  ip: '',
+  lookupIP: '',
+  device: null,
+  statusMessage: '',
+  statusType: 'info',
+  loading: false,
+  applying: false,
+  flushConntrack: true
+};
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+    return {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[char];
+  });
+}
+
+function renderStatus(message, type, extraClass) {
+  if (!message) return '';
+  return '<div class="status ' + (type || 'info') + (extraClass ? ' ' + extraClass : '') + '">' + escapeHtml(message) + '</div>';
+}
+
+function renderIPList(dev) {
+  return [
+    ...((dev.ipv4s || []).map(function (ip) { return '<span class="ip-item ip-v4">' + escapeHtml(ip) + '</span>'; })),
+    ...((dev.ipv6s || []).map(function (ip) { return '<span class="ip-item ip-v6">' + escapeHtml(ip) + '</span>'; }))
+  ].join('') || '<span class="ip-item ip-empty">none</span>';
+}
+
+function renderPolicyCards(currentPolicy, handlerName, disabled) {
+  return policies.map(function (policy) {
+    const active = policy.name === currentPolicy ? 'active' : '';
+    const locked = disabled ? 'disabled' : '';
+    const clickHandler = disabled ? '' : "onclick='" + handlerName + '(' + JSON.stringify(policy.name) + ")'";
+    return `
+      <div class="policy-card ${active} ${locked}" ${clickHandler}>
+        <div class="policy-dot"></div>
+        <div class="policy-info">
+          <div class="policy-name">${escapeHtml(policy.name)}</div>
+          <div class="policy-desc">${escapeHtml(policy.description || '')}</div>
+        </div>
+        <div class="policy-mark">mark ${escapeHtml(policy.mark)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function readJSON(res) {
+  try {
+    return await res.json();
+  } catch (_) {
+    return null;
+  }
+}
 
 async function load() {
   try {
-    const [devRes, polRes] = await Promise.all([
+    const [devRes, polRes, featureRes] = await Promise.all([
       fetch('/api/device'),
-      fetch('/api/policies')
+      fetch('/api/policies'),
+      fetch('/api/features')
     ]);
     if (!devRes.ok) throw new Error('Failed to load device info');
     if (!polRes.ok) throw new Error('Failed to load policies');
+    if (!featureRes.ok) throw new Error('Failed to load server capabilities');
     deviceData = await devRes.json();
     policies = await polRes.json();
+    const features = await featureRes.json();
+    adminEnabled = !!features.admin_enabled;
     render();
   } catch (e) {
     showStatus('Error: ' + e.message, 'err');
@@ -127,59 +402,129 @@ function showStatus(msg, type) {
   const el = document.getElementById('status');
   el.className = 'status ' + (type || 'info');
   el.textContent = msg;
-  if (type === 'ok') setTimeout(() => { el.textContent = ''; el.className = ''; }, 3000);
+  if (type === 'ok') {
+    setTimeout(function () {
+      el.textContent = '';
+      el.className = '';
+    }, 3000);
+  }
 }
 
 function render() {
   const dev = deviceData;
   const app = document.getElementById('app');
+  const selfPolicyCards = renderPolicyCards(dev.policy, 'setPolicy', applying);
+  const adminPolicyCards = adminState.device
+    ? renderPolicyCards(adminState.device.policy, 'setAdminPolicy', adminState.loading || adminState.applying)
+    : '';
 
-  const allIPs = [
-    ...(dev.ipv4s || []).map(ip => `<span class="ip-item ip-v4">${ip}</span>`),
-    ...(dev.ipv6s || []).map(ip => `<span class="ip-item ip-v6">${ip}</span>`)
-  ].join('') || '<span class="ip-item" style="color:#bbb">none</span>';
-
-  const policyCards = policies.map(p => {
-    const active = p.name === dev.policy ? 'active' : '';
-    return `
-      <div class="policy-card ${active}" onclick="setPolicy('${p.name}')">
-        <div class="policy-dot"></div>
-        <div class="policy-info">
-          <div class="policy-name">${p.name}</div>
-          <div class="policy-desc">${p.description || ''}</div>
-        </div>
-        <div class="policy-mark">mark ${p.mark}</div>
+  const adminPanel = !adminEnabled ? `
+    <div class="empty-state">
+      Remote admin management is disabled on this server. Set <code>admin_psk</code> in the config to enable managing other devices by IP.
+    </div>
+  ` : adminState.device ? `
+    <div class="admin-panel">
+      <h2>Resolved Device</h2>
+      <div class="info-row">
+        <span class="info-label">Lookup IP</span>
+        <span class="info-value">${escapeHtml(adminState.lookupIP || '-')}</span>
       </div>
-    `;
-  }).join('');
-
-  app.innerHTML = `
-    <div class="card">
-      <h2>Device Info</h2>
       <div class="info-row">
         <span class="info-label">Source IP</span>
-        <span class="info-value">${dev.source_ip || '-'}</span>
+        <span class="info-value">${escapeHtml(adminState.device.source_ip || '-')}</span>
       </div>
       <div class="info-row">
         <span class="info-label">MAC Address</span>
-        <span class="info-value">${dev.mac || 'unknown'}</span>
+        <span class="info-value">${escapeHtml(adminState.device.mac || 'unknown')}</span>
       </div>
       <div class="info-row">
         <span class="info-label">All Addresses</span>
-        <span class="info-value"><span class="ip-list">${allIPs}</span></span>
+        <span class="info-value"><span class="ip-list">${renderIPList(adminState.device)}</span></span>
       </div>
       <div class="info-row">
         <span class="info-label">Current Policy</span>
-        <span class="info-value" style="font-weight:600;color:#4a90e2">${dev.policy || '-'}</span>
+        <span class="info-value" style="font-weight:600;color:#4a90e2">${escapeHtml(adminState.device.policy || '-')}</span>
+      </div>
+      <h2 style="margin-top:18px">Set Remote Policy</h2>
+      <div class="policy-grid">${adminPolicyCards}</div>
+      <label class="checkbox-row">
+        <input type="checkbox" ${adminState.flushConntrack ? 'checked' : ''} onchange="adminState.flushConntrack=this.checked">
+        Interrupt existing connections
+      </label>
+    </div>
+  ` : `
+    <div class="empty-state">
+      Enter the admin PSK and a target IP, then resolve the remote device to review its policy and addresses.
+    </div>
+  `;
+
+  app.innerHTML = `
+    <div class="card">
+      <div class="card-tag self">Self-service</div>
+      <div class="card-title">Manage this device</div>
+      <div class="card-copy">This section controls the device making the current request and continues to work without authentication.</div>
+      <h2>Device Info</h2>
+      <div class="info-row">
+        <span class="info-label">Source IP</span>
+        <span class="info-value">${escapeHtml(dev.source_ip || '-')}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">MAC Address</span>
+        <span class="info-value">${escapeHtml(dev.mac || 'unknown')}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">All Addresses</span>
+        <span class="info-value"><span class="ip-list">${renderIPList(dev)}</span></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Current Policy</span>
+        <span class="info-value" style="font-weight:600;color:#4a90e2">${escapeHtml(dev.policy || '-')}</span>
       </div>
     </div>
     <div class="card">
       <h2>Select Policy</h2>
-      <div class="policy-grid">${policyCards}</div>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:0.85rem;color:#555;cursor:pointer;user-select:none">
-        <input type="checkbox" id="flushCt" checked style="width:16px;height:16px;accent-color:#4a90e2">
+      <div class="policy-grid">${selfPolicyCards}</div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="flushCt" ${selfState.flushConntrack ? 'checked' : ''} onchange="selfState.flushConntrack=this.checked">
         Interrupt existing connections
       </label>
+    </div>
+    <div class="card admin-card">
+      <div class="card-tag admin">Admin</div>
+      <div class="card-title">Manage another device</div>
+      <div class="card-copy">Use the pre-shared key and a target IP to resolve a different device, then apply a policy through the protected admin endpoints. The PSK stays only in this page state.</div>
+      ${renderStatus(adminState.statusMessage, adminState.statusType, 'inline-status')}
+      <div class="field-grid">
+        <label>
+          <span class="field-label">Pre-shared key</span>
+          <input
+            class="text-input"
+            type="password"
+            autocomplete="new-password"
+            placeholder="Enter admin PSK"
+            value="${escapeHtml(adminState.psk)}"
+            ${adminEnabled ? '' : 'disabled'}
+            oninput="adminState.psk=this.value"
+          >
+        </label>
+        <label>
+          <span class="field-label">Target IP</span>
+          <input
+            class="text-input"
+            type="text"
+            inputmode="text"
+            spellcheck="false"
+            placeholder="192.168.1.42 or 2001:db8::42"
+            value="${escapeHtml(adminState.ip)}"
+            ${adminEnabled ? '' : 'disabled'}
+            oninput="adminState.ip=this.value"
+          >
+        </label>
+      </div>
+      <button class="action-button" onclick="lookupAdminDevice()" ${!adminEnabled || adminState.loading || adminState.applying ? 'disabled' : ''}>
+        ${adminState.loading ? 'Resolving device...' : 'Resolve remote device'}
+      </button>
+      ${adminPanel}
     </div>
   `;
 }
@@ -189,21 +534,131 @@ async function setPolicy(name) {
   if (deviceData && deviceData.policy === name) return;
   applying = true;
   showStatus('Applying policy: ' + name + '...', 'info');
+  render();
   try {
     const res = await fetch('/api/policy', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({policy: name, flush_conntrack: document.getElementById('flushCt')?.checked ?? true})
+      body: JSON.stringify({policy: name, flush_conntrack: selfState.flushConntrack})
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed');
+    const data = await readJSON(res);
+    if (!res.ok) throw new Error((data && data.error) || 'Failed');
     deviceData = data;
     render();
     showStatus('Policy set to: ' + name, 'ok');
   } catch (e) {
+    render();
     showStatus('Error: ' + e.message, 'err');
   } finally {
     applying = false;
+    render();
+  }
+}
+
+async function lookupAdminDevice() {
+  if (adminState.loading || adminState.applying) return;
+  if (!adminEnabled) {
+    adminState.statusMessage = 'Remote admin management is disabled on this server.';
+    adminState.statusType = 'err';
+    render();
+    return;
+  }
+
+  const psk = adminState.psk.trim();
+  const ip = adminState.ip.trim();
+
+  if (!psk) {
+    adminState.statusMessage = 'Enter the admin PSK before resolving another device.';
+    adminState.statusType = 'err';
+    render();
+    return;
+  }
+
+  if (!ip) {
+    adminState.statusMessage = 'Enter the target IP to resolve another device.';
+    adminState.statusType = 'err';
+    render();
+    return;
+  }
+
+  adminState.loading = true;
+  adminState.lookupIP = '';
+  adminState.device = null;
+  adminState.statusMessage = 'Resolving remote device ' + ip + '...';
+  adminState.statusType = 'info';
+  render();
+
+  try {
+    const res = await fetch('/api/admin/device?ip=' + encodeURIComponent(ip), {
+      headers: {'X-WLT-PSK': psk}
+    });
+    const data = await readJSON(res);
+    if (!res.ok) throw new Error((data && data.error) || 'Failed to resolve device');
+    adminState.lookupIP = ip;
+    adminState.device = data;
+    adminState.statusMessage = 'Remote device resolved: ' + ip;
+    adminState.statusType = 'ok';
+  } catch (e) {
+    adminState.statusMessage = 'Error: ' + e.message;
+    adminState.statusType = 'err';
+  } finally {
+    adminState.loading = false;
+    render();
+  }
+}
+
+async function setAdminPolicy(name) {
+  if (adminState.loading || adminState.applying) return;
+  if (!adminEnabled) {
+    adminState.statusMessage = 'Remote admin management is disabled on this server.';
+    adminState.statusType = 'err';
+    render();
+    return;
+  }
+  const psk = adminState.psk.trim();
+  if (!adminState.lookupIP || !adminState.device) {
+    adminState.statusMessage = 'Resolve a remote device before changing its policy.';
+    adminState.statusType = 'err';
+    render();
+    return;
+  }
+  if (!psk) {
+    adminState.statusMessage = 'Enter the admin PSK before changing another device.';
+    adminState.statusType = 'err';
+    render();
+    return;
+  }
+  if (adminState.device.policy === name) return;
+
+  adminState.applying = true;
+  adminState.statusMessage = 'Applying remote policy: ' + name + '...';
+  adminState.statusType = 'info';
+  render();
+
+  try {
+    const res = await fetch('/api/admin/policy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-WLT-PSK': psk
+      },
+      body: JSON.stringify({
+        policy: name,
+        ip: adminState.lookupIP,
+        flush_conntrack: adminState.flushConntrack
+      })
+    });
+    const data = await readJSON(res);
+    if (!res.ok) throw new Error((data && data.error) || 'Failed');
+    adminState.device = data;
+    adminState.statusMessage = 'Remote policy set to: ' + name;
+    adminState.statusType = 'ok';
+  } catch (e) {
+    adminState.statusMessage = 'Error: ' + e.message;
+    adminState.statusType = 'err';
+  } finally {
+    adminState.applying = false;
+    render();
   }
 }
 
