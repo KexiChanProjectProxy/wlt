@@ -424,45 +424,6 @@ const translations = {
     setRemotePolicy: "设置远程策略",
     enterPskAndTargetIp: "请输入管理PSK和目标IP，然后解析远程设备以查看其策略和地址。"
   },
-  zh: {
-    title: "WLT 流量策略",
-    loading: "加载中...",
-    error: "错误：",
-    failedLoadDeviceInfo: "加载设备信息失败",
-    failedLoadPolicies: "加载策略列表失败",
-    failedLoadFeatures: "加载服务器功能失败",
-    applyPolicy: "应用策略：",
-    policySetTo: "策略已设置为：",
-    resolveDevice: "解析远程设备",
-    resolvingDevice: "正在解析设备...",
-    adminManagementDisabled: "服务器上禁用了远程管理功能。在配置中设置 <code>admin_psk</code> 来启用通过IP管理其他设备。",
-    enterPsk: "请先输入管理预共享密钥，再解析其他设备。",
-    enterTargetIp: "请输入目标IP地址来解析其他设备。",
-    resolveDeviceStarted: "正在解析远程设备 ",
-    deviceResolved: "远程设备已解析：",
-    resolveFirstDevice: "请先解析一个远程设备，再更改其策略。",
-    enterPskForAdmin: "请先输入管理预共享密钥，再更改其他设备。",
-    applyRemotePolicy: "应用远程策略：",
-    remotePolicySetTo: "远程策略已设置为：",
-    selfService: "自助服务",
-    manageThisDevice: "管理此设备",
-    selfServiceDescription: "此部分控制发起当前请求的设备，无需身份验证即可继续工作。",
-    deviceInfo: "设备信息",
-    sourceIp: "源IP地址",
-    macAddress: "MAC地址",
-    allAddresses: "所有地址",
-    currentPolicy: "当前策略",
-    selectPolicy: "选择策略",
-    interruptConnections: "中断现有连接",
-    manageAnotherDevice: "管理其他设备",
-    adminDescription: "使用预共享密钥和目标IP地址解析不同的设备，然后通过受保护的管理端点应用策略。PSK仅保留在此页面状态中。",
-    preSharedKey: "预共享密钥",
-    enterPskPlaceholder: "输入管理PSK",
-    targetIp: "目标IP地址",
-    ipPlaceholder: "192.168.1.42 或 2001:db8::42",
-    none: "无",
-    unknown: "未知"
-  },
   ja: {
     title: "WLT トラフィックポリシー",
     loading: "読み込み中...",
@@ -564,40 +525,6 @@ function setLanguage(lang) {
 document.getElementById('langSelect').addEventListener('change', function() {
   setLanguage(this.value);
 });
-
-function setLanguage(lang) {
-  if (translations[lang]) {
-    currentLang = lang;
-    localStorage.setItem('wlt-language', lang);
-    document.getElementById('langSelect').value = lang;
-    document.getElementById('pageTitle').textContent = t('title');
-    document.getElementById('mainTitle').textContent = t('title');
-    render();
-  }
-}
-  
-  const browserLang = navigator.language || navigator.userLanguage;
-  const langCode = browserLang.toLowerCase();
-  
-  if (langCode.startsWith('zh')) {
-    currentLang = 'zh';
-  } else if (langCode.startsWith('ja')) {
-    currentLang = 'ja';
-  } else {
-    currentLang = 'en';
-  }
-  
-  return currentLang;
-}
-
-function setLanguage(lang) {
-  if (translations[lang]) {
-    currentLang = lang;
-    localStorage.setItem('wlt-language', lang);
-    document.getElementById('langSelect').value = lang;
-    render();
-  }
-}
 
 function escapeHtml(value) {
   return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
