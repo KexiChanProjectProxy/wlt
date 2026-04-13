@@ -68,10 +68,12 @@ func run() error {
 
 	reconciler := DefaultReconciler(cfg)
 	reconcileCtx, reconcileCancel := context.WithCancel(context.Background())
+	reconcileStopped := make(chan struct{})
 	go func() {
 		if err := reconciler.Start(reconcileCtx); err != nil && reconcileCtx.Err() == nil {
 			log.Printf("reconciler stopped: %v", err)
 		}
+		close(reconcileStopped)
 	}()
 
 	// Start HTTP server
@@ -97,12 +99,21 @@ func run() error {
 
 	select {
 	case err := <-errCh:
+		reconcileCancel()
 		return err
 	case sig := <-sigCh:
 		log.Printf("Received signal: %v, shutting down...", sig)
 	}
 
 	reconcileCancel()
+
+	// Wait for reconciler to finish shutdown
+	select {
+	case <-reconcileStopped:
+	case <-time.After(5 * time.Second):
+		log.Printf("Warning: reconciler did not shutdown gracefully, forcing stop")
+		reconciler.Stop()
+	}
 
 	// Graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
