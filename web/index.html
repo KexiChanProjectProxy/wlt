@@ -631,7 +631,7 @@ const translations = {
     deviceInfo: "Device Information",
     sourceIp: "Your IP Address",
     macAddress: "Device ID",
-    allAddresses: "All IP Addresses",
+    ipAddress: "IP Address",
     currentPolicy: "Current Connection",
     selectPolicy: "Choose how this device connects",
     interruptConnections: "Force immediate switch (may briefly disconnect active downloads)",
@@ -649,7 +649,7 @@ const translations = {
     enterPskAndTargetIp: "Enter the access password and target IP, then look up the device to see its connection and addresses."
   },
   zh: {
-    title: "网络控制 - 设备连接管理器",
+    title: "网络通",
     loading: "加载设备信息...",
     error: "错误：",
     failedLoadDeviceInfo: "加载设备信息失败",
@@ -674,7 +674,7 @@ const translations = {
     deviceInfo: "设备信息",
     sourceIp: "您的IP地址",
     macAddress: "设备标识",
-    allAddresses: "所有IP地址",
+    ipAddress: "IP地址",
     currentPolicy: "当前连接",
     selectPolicy: "选择连接方式",
     interruptConnections: "强制立即切换（可能会短暂断开正在进行的下载）",
@@ -692,7 +692,7 @@ const translations = {
     enterPskAndTargetIp: "输入访问密码和目标IP，然后查找设备以查看其连接和地址。"
   },
   ja: {
-    title: "ネットワーク制御 - デバイス接続マネージャー",
+    title: "WLT",
     loading: "デバイス情報を読み込み中...",
     error: "エラー：",
     failedLoadDeviceInfo: "デバイス情報の読み込みに失敗しました",
@@ -717,7 +717,7 @@ const translations = {
     deviceInfo: "デバイス情報",
     sourceIp: "あなたのIPアドレス",
     macAddress: "デバイスID",
-    allAddresses: "すべてのIPアドレス",
+    ipAddress: "IPアドレス",
     currentPolicy: "現在の接続",
     selectPolicy: "接続方法を選択",
     interruptConnections: "即時切り替えを強制（アクティブなダウンロードが一時的に切断される可能性があります）",
@@ -815,10 +815,9 @@ function renderStatus(message, type, extraClass) {
 }
 
 function renderIPList(dev) {
-  return [
-    ...((dev.ipv4s || []).map(function (ip) { return '<span class="ip-item ip-v4">' + escapeHtml(ip) + '</span>'; })),
-    ...((dev.ipv6s || []).map(function (ip) { return '<span class="ip-item ip-v6">' + escapeHtml(ip) + '</span>'; }))
-  ].join('') || '<span class="ip-item ip-empty">' + t('none') + '</span>';
+  const ip = dev.source_ip;
+  if (!ip) return '<span class="ip-item ip-empty">' + t('none') + '</span>';
+  return '<span class="ip-item">' + escapeHtml(ip) + '</span>';
 }
 
 function renderPolicyCards(currentPolicy, handlerName, disabled) {
@@ -930,7 +929,7 @@ function render() {
           <span class="info-value">${escapeHtml(adminState.device.mac || t('unknown'))}</span>
         </div>
         <div class="info-row">
-          <span class="info-label">${t('allAddresses')}</span>
+          <span class="info-label">${t('ipAddress')}</span>
           <span class="info-value"><span class="ip-list">${renderIPList(adminState.device)}</span></span>
         </div>
         <div class="info-row">
@@ -966,7 +965,7 @@ function render() {
             <span class="info-value">${escapeHtml(dev.mac || t('unknown'))}</span>
           </div>
           <div class="info-row">
-            <span class="info-label">${t('allAddresses')}</span>
+            <span class="info-label">${t('ipAddress')}</span>
             <span class="info-value"><span class="ip-list">${renderIPList(dev)}</span></span>
           </div>
           <div class="info-row">
