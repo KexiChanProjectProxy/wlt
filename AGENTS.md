@@ -60,15 +60,24 @@ go test ./...
 
 ### Release (CI/CD)
 
-1. Push a tag matching `v*` to trigger GitHub Actions
-2. Workflow: test → build (amd64, arm64) → create GitHub release with binaries
-3. Binaries: `dist/wlt-linux-amd64`, `dist/wlt-linux-arm64`
+**Prerequisites**: All changes must be committed and pushed to `main` branch first.
 
 ```bash
-# Create and push release
+# 1. Commit changes
+git add <files>
+git commit -m "description"
+
+# 2. Push to origin
+git push origin main
+
+# 3. Tag and push (triggers GitHub Actions: test → build → release)
 git tag -a vX.Y.Z -m "release message"
 git push origin vX.Y.Z
 ```
+
+**Workflow**: test → build (amd64, arm64) → create GitHub release with binaries
+
+**Artifacts**: `dist/wlt-linux-amd64`, `dist/wlt-linux-arm64` attached to GitHub release
 
 ### Release Workflow (GitHub Actions)
 
