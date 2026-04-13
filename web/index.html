@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WLT - Traffic Policy</title>
+<title id="pageTitle">WLT - Traffic Policy</title>
 <style>
   :root {
     --bg: #f0f2f5;
@@ -295,19 +295,216 @@
     user-select: none;
   }
 
-  .checkbox-row input {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--primary);
-  }
+ .checkbox-row input {
+     width: 16px;
+     height: 16px;
+     accent-color: var(--primary);
+   }
+   
+   .lang-selector {
+     position: fixed;
+     top: 20px;
+     right: 20px;
+     padding: 6px 10px;
+     border: 1px solid var(--border);
+     border-radius: 6px;
+     background: var(--surface);
+     color: var(--text);
+     font-size: 0.8rem;
+     cursor: pointer;
+     outline: none;
+     transition: border-color 0.15s ease;
+   }
+   
+   .lang-selector:hover {
+     border-color: var(--primary);
+   }
+   
+   .lang-selector:focus {
+     border-color: var(--primary);
+     box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+   }
   </style>
 </head>
 <body>
-<h1>WLT Traffic Policy</h1>
+<select id="langSelect" class="lang-selector">
+  <option value="en">EN</option>
+  <option value="zh">中文</option>
+  <option value="ja">日本語</option>
+</select>
+<h1 id="mainTitle">WLT Traffic Policy</h1>
 <div id="status"></div>
 <div id="app"><div class="loading">Loading...</div></div>
 
 <script>
+const translations = {
+  en: {
+    title: "WLT Traffic Policy",
+    loading: "Loading...",
+    error: "Error: ",
+    failedLoadDeviceInfo: "Failed to load device info",
+    failedLoadPolicies: "Failed to load policies",
+    failedLoadFeatures: "Failed to load server capabilities",
+    applyPolicy: "Applying policy: ",
+    policySetTo: "Policy set to: ",
+    resolveDevice: "Resolve remote device",
+    resolvingDevice: "Resolving device...",
+    adminManagementDisabled: "Remote admin management is disabled on this server. Set <code>admin_psk</code> in the config to enable managing other devices by IP.",
+    enterPsk: "Enter the admin PSK before resolving another device.",
+    enterTargetIp: "Enter the target IP to resolve another device.",
+    resolveDeviceStarted: "Resolving remote device ",
+    deviceResolved: "Remote device resolved: ",
+    resolveFirstDevice: "Resolve a remote device before changing its policy.",
+    enterPskForAdmin: "Enter the admin PSK before changing another device.",
+    applyRemotePolicy: "Applying remote policy: ",
+    remotePolicySetTo: "Remote policy set to: ",
+    selfService: "Self-service",
+    manageThisDevice: "Manage this device",
+    selfServiceDescription: "This section controls the device making the current request and continues to work without authentication.",
+    deviceInfo: "Device Info",
+    sourceIp: "Source IP",
+    macAddress: "MAC Address",
+    allAddresses: "All Addresses",
+    currentPolicy: "Current Policy",
+    selectPolicy: "Select Policy",
+    interruptConnections: "Interrupt existing connections",
+    manageAnotherDevice: "Manage another device",
+    adminDescription: "Use the pre-shared key and a target IP to resolve a different device, then apply a policy through the protected admin endpoints. The PSK stays only in this page state.",
+    preSharedKey: "Pre-shared key",
+    enterPskPlaceholder: "Enter admin PSK",
+    targetIp: "Target IP",
+    ipPlaceholder: "192.168.1.42 or 2001:db8::42",
+    none: "none",
+    unknown: "unknown",
+    resolvedDevice: "Resolved Device",
+    lookupIp: "Lookup IP",
+    setRemotePolicy: "Set Remote Policy",
+    enterPskAndTargetIp: "Enter the admin PSK and a target IP, then resolve the remote device to review its policy and addresses."
+  },
+  zh: {
+    title: "WLT 流量策略",
+    loading: "加载中...",
+    error: "错误：",
+    failedLoadDeviceInfo: "加载设备信息失败",
+    failedLoadPolicies: "加载策略列表失败",
+    failedLoadFeatures: "加载服务器功能失败",
+    applyPolicy: "应用策略：",
+    policySetTo: "策略已设置为：",
+    resolveDevice: "解析远程设备",
+    resolvingDevice: "正在解析设备...",
+    adminManagementDisabled: "服务器上禁用了远程管理功能。在配置中设置 <code>admin_psk</code> 来启用通过IP管理其他设备。",
+    enterPsk: "请先输入管理预共享密钥，再解析其他设备。",
+    enterTargetIp: "请输入目标IP地址来解析其他设备。",
+    resolveDeviceStarted: "正在解析远程设备 ",
+    deviceResolved: "远程设备已解析：",
+    resolveFirstDevice: "请先解析一个远程设备，再更改其策略。",
+    enterPskForAdmin: "请先输入管理预共享密钥，再更改其他设备。",
+    applyRemotePolicy: "应用远程策略：",
+    remotePolicySetTo: "远程策略已设置为：",
+    selfService: "自助服务",
+    manageThisDevice: "管理此设备",
+    selfServiceDescription: "此部分控制发起当前请求的设备，无需身份验证即可继续工作。",
+    deviceInfo: "设备信息",
+    sourceIp: "源IP地址",
+    macAddress: "MAC地址",
+    allAddresses: "所有地址",
+    currentPolicy: "当前策略",
+    selectPolicy: "选择策略",
+    interruptConnections: "中断现有连接",
+    manageAnotherDevice: "管理其他设备",
+    adminDescription: "使用预共享密钥和目标IP地址解析不同的设备，然后通过受保护的管理端点应用策略。PSK仅保留在此页面状态中。",
+    preSharedKey: "预共享密钥",
+    enterPskPlaceholder: "输入管理PSK",
+    targetIp: "目标IP地址",
+    ipPlaceholder: "192.168.1.42 或 2001:db8::42",
+    none: "无",
+    unknown: "未知",
+    resolvedDevice: "已解析设备",
+    lookupIp: "解析IP",
+    setRemotePolicy: "设置远程策略",
+    enterPskAndTargetIp: "请输入管理PSK和目标IP，然后解析远程设备以查看其策略和地址。"
+  },
+  zh: {
+    title: "WLT 流量策略",
+    loading: "加载中...",
+    error: "错误：",
+    failedLoadDeviceInfo: "加载设备信息失败",
+    failedLoadPolicies: "加载策略列表失败",
+    failedLoadFeatures: "加载服务器功能失败",
+    applyPolicy: "应用策略：",
+    policySetTo: "策略已设置为：",
+    resolveDevice: "解析远程设备",
+    resolvingDevice: "正在解析设备...",
+    adminManagementDisabled: "服务器上禁用了远程管理功能。在配置中设置 <code>admin_psk</code> 来启用通过IP管理其他设备。",
+    enterPsk: "请先输入管理预共享密钥，再解析其他设备。",
+    enterTargetIp: "请输入目标IP地址来解析其他设备。",
+    resolveDeviceStarted: "正在解析远程设备 ",
+    deviceResolved: "远程设备已解析：",
+    resolveFirstDevice: "请先解析一个远程设备，再更改其策略。",
+    enterPskForAdmin: "请先输入管理预共享密钥，再更改其他设备。",
+    applyRemotePolicy: "应用远程策略：",
+    remotePolicySetTo: "远程策略已设置为：",
+    selfService: "自助服务",
+    manageThisDevice: "管理此设备",
+    selfServiceDescription: "此部分控制发起当前请求的设备，无需身份验证即可继续工作。",
+    deviceInfo: "设备信息",
+    sourceIp: "源IP地址",
+    macAddress: "MAC地址",
+    allAddresses: "所有地址",
+    currentPolicy: "当前策略",
+    selectPolicy: "选择策略",
+    interruptConnections: "中断现有连接",
+    manageAnotherDevice: "管理其他设备",
+    adminDescription: "使用预共享密钥和目标IP地址解析不同的设备，然后通过受保护的管理端点应用策略。PSK仅保留在此页面状态中。",
+    preSharedKey: "预共享密钥",
+    enterPskPlaceholder: "输入管理PSK",
+    targetIp: "目标IP地址",
+    ipPlaceholder: "192.168.1.42 或 2001:db8::42",
+    none: "无",
+    unknown: "未知"
+  },
+  ja: {
+    title: "WLT トラフィックポリシー",
+    loading: "読み込み中...",
+    error: "エラー：",
+    failedLoadDeviceInfo: "デバイス情報の読み込みに失敗しました",
+    failedLoadPolicies: "ポリシーの読み込みに失敗しました",
+    failedLoadFeatures: "サーバーカパビリティの読み込みに失敗しました",
+    applyPolicy: "ポリシーを適用中：",
+    policySetTo: "ポリシーが設定されました：",
+    resolveDevice: "リモートデバイスを解決",
+    resolvingDevice: "デバイスを解決中...",
+    adminManagementDisabled: "サーバーでリモート管理が無効になっています。他のデバイスをIPで管理するには、設定で <code>admin_psk</code> を設定してください。",
+    enterPsk: "他のデバイスを解決する前に、管理用PSKを入力してください。",
+    enterTargetIp: "他のデバイスを解決するために、ターゲットIPを入力してください。",
+    resolveDeviceStarted: "リモートデバイスを解決中",
+    deviceResolved: "リモートデバイスが解決されました：",
+    resolveFirstDevice: "ポリシーを変更する前に、まずリモートデバイスを解決してください。",
+    enterPskForAdmin: "他のデバイスを変更する前に、管理用PSKを入力してください。",
+    applyRemotePolicy: "リモートポリシーを適用中：",
+    remotePolicySetTo: "リモートポリシーが設定されました：",
+    selfService: "セルフサービス",
+    manageThisDevice: "このデバイスを管理",
+    selfServiceDescription: "このセクションは、現在のリクエストを行うデバイスを制御し、認証なしで引き続き動作します。",
+    deviceInfo: "デバイス情報",
+    sourceIp: "ソースIP",
+    macAddress: "MACアドレス",
+    allAddresses: "すべてのアドレス",
+    currentPolicy: "現在のポリシー",
+    selectPolicy: "ポリシーを選択",
+    interruptConnections: "既存の接続を中断",
+    manageAnotherDevice: "他のデバイスを管理",
+    adminDescription: "事前共有鍵とターゲットIPを使用して別のデバイスを解決し、保護された管理エンドポイントを介してポリシーを適用します。PSKはこのページの状態にのみ保持されます。",
+    preSharedKey: "事前共有鍵",
+    enterPskPlaceholder: "管理用PSKを入力",
+    targetIp: "ターゲットIP",
+    ipPlaceholder: "192.168.1.42 または 2001:db8::42",
+    none: "なし",
+    unknown: "不明"
+  }
+};
+
+let currentLang = 'en';
 let deviceData = null;
 let policies = [];
 let applying = false;
@@ -326,6 +523,81 @@ let adminState = {
   applying: false,
   flushConntrack: true
 };
+
+function t(key) {
+return translations[currentLang][key] || translations['en'][key];
+}
+
+function detectLanguage() {
+  const savedLang = localStorage.getItem('wlt-language');
+  if (savedLang && translations[savedLang]) {
+    currentLang = savedLang;
+  } else {
+    const browserLang = navigator.language || navigator.userLanguage;
+    const langCode = browserLang.toLowerCase();
+    
+    if (langCode.startsWith('zh')) {
+      currentLang = 'zh';
+    } else if (langCode.startsWith('ja')) {
+      currentLang = 'ja';
+    } else {
+      currentLang = 'en';
+    }
+  }
+  
+  document.getElementById('langSelect').value = currentLang;
+  document.getElementById('pageTitle').textContent = t('title');
+  document.getElementById('mainTitle').textContent = t('title');
+  
+  return currentLang;
+}
+
+function setLanguage(lang) {
+  if (translations[lang]) {
+    currentLang = lang;
+    localStorage.setItem('wlt-language', lang);
+    document.getElementById('langSelect').value = lang;
+    render();
+  }
+}
+
+document.getElementById('langSelect').addEventListener('change', function() {
+  setLanguage(this.value);
+});
+
+function setLanguage(lang) {
+  if (translations[lang]) {
+    currentLang = lang;
+    localStorage.setItem('wlt-language', lang);
+    document.getElementById('langSelect').value = lang;
+    document.getElementById('pageTitle').textContent = t('title');
+    document.getElementById('mainTitle').textContent = t('title');
+    render();
+  }
+}
+  
+  const browserLang = navigator.language || navigator.userLanguage;
+  const langCode = browserLang.toLowerCase();
+  
+  if (langCode.startsWith('zh')) {
+    currentLang = 'zh';
+  } else if (langCode.startsWith('ja')) {
+    currentLang = 'ja';
+  } else {
+    currentLang = 'en';
+  }
+  
+  return currentLang;
+}
+
+function setLanguage(lang) {
+  if (translations[lang]) {
+    currentLang = lang;
+    localStorage.setItem('wlt-language', lang);
+    document.getElementById('langSelect').value = lang;
+    render();
+  }
+}
 
 function escapeHtml(value) {
   return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
@@ -348,7 +620,7 @@ function renderIPList(dev) {
   return [
     ...((dev.ipv4s || []).map(function (ip) { return '<span class="ip-item ip-v4">' + escapeHtml(ip) + '</span>'; })),
     ...((dev.ipv6s || []).map(function (ip) { return '<span class="ip-item ip-v6">' + escapeHtml(ip) + '</span>'; }))
-  ].join('') || '<span class="ip-item ip-empty">none</span>';
+  ].join('') || '<span class="ip-item ip-empty">' + t('none') + '</span>';
 }
 
 function renderPolicyCards(currentPolicy, handlerName, disabled) {
@@ -384,16 +656,16 @@ async function load() {
       fetch('/api/policies'),
       fetch('/api/features')
     ]);
-    if (!devRes.ok) throw new Error('Failed to load device info');
-    if (!polRes.ok) throw new Error('Failed to load policies');
-    if (!featureRes.ok) throw new Error('Failed to load server capabilities');
+    if (!devRes.ok) throw new Error(t('failedLoadDeviceInfo'));
+    if (!polRes.ok) throw new Error(t('failedLoadPolicies'));
+    if (!featureRes.ok) throw new Error(t('failedLoadFeatures'));
     deviceData = await devRes.json();
     policies = await polRes.json();
     const features = await featureRes.json();
     adminEnabled = !!features.admin_enabled;
     render();
   } catch (e) {
-    showStatus('Error: ' + e.message, 'err');
+    showStatus(t('error') + e.message, 'err');
     document.getElementById('app').innerHTML = '';
   }
 }
@@ -413,6 +685,12 @@ function showStatus(msg, type) {
 function render() {
   const dev = deviceData;
   const app = document.getElementById('app');
+  
+  if (!dev) {
+    app.innerHTML = `<div class="loading">${t('loading')}</div>`;
+    return;
+  }
+  
   const selfPolicyCards = renderPolicyCards(dev.policy, 'setPolicy', applying);
   const adminPolicyCards = adminState.device
     ? renderPolicyCards(adminState.device.policy, 'setAdminPolicy', adminState.loading || adminState.applying)
@@ -420,101 +698,101 @@ function render() {
 
   const adminPanel = !adminEnabled ? `
     <div class="empty-state">
-      Remote admin management is disabled on this server. Set <code>admin_psk</code> in the config to enable managing other devices by IP.
+      ${t('adminManagementDisabled')}
     </div>
   ` : adminState.device ? `
     <div class="admin-panel">
-      <h2>Resolved Device</h2>
+      <h2>${t('resolvedDevice')}</h2>
       <div class="info-row">
-        <span class="info-label">Lookup IP</span>
+        <span class="info-label">${t('lookupIp')}</span>
         <span class="info-value">${escapeHtml(adminState.lookupIP || '-')}</span>
       </div>
       <div class="info-row">
-        <span class="info-label">Source IP</span>
+        <span class="info-label">${t('sourceIp')}</span>
         <span class="info-value">${escapeHtml(adminState.device.source_ip || '-')}</span>
       </div>
       <div class="info-row">
-        <span class="info-label">MAC Address</span>
-        <span class="info-value">${escapeHtml(adminState.device.mac || 'unknown')}</span>
+        <span class="info-label">${t('macAddress')}</span>
+        <span class="info-value">${escapeHtml(adminState.device.mac || t('unknown'))}</span>
       </div>
       <div class="info-row">
-        <span class="info-label">All Addresses</span>
+        <span class="info-label">${t('allAddresses')}</span>
         <span class="info-value"><span class="ip-list">${renderIPList(adminState.device)}</span></span>
       </div>
       <div class="info-row">
-        <span class="info-label">Current Policy</span>
+        <span class="info-label">${t('currentPolicy')}</span>
         <span class="info-value" style="font-weight:600;color:#4a90e2">${escapeHtml(adminState.device.policy || '-')}</span>
       </div>
-      <h2 style="margin-top:18px">Set Remote Policy</h2>
+      <h2 style="margin-top:18px">${t('setRemotePolicy')}</h2>
       <div class="policy-grid">${adminPolicyCards}</div>
       <label class="checkbox-row">
         <input type="checkbox" ${adminState.flushConntrack ? 'checked' : ''} onchange="adminState.flushConntrack=this.checked">
-        Interrupt existing connections
+        ${t('interruptConnections')}
       </label>
     </div>
   ` : `
     <div class="empty-state">
-      Enter the admin PSK and a target IP, then resolve the remote device to review its policy and addresses.
+      ${t('enterPskAndTargetIp')}
     </div>
   `;
 
   app.innerHTML = `
     <div class="card">
-      <div class="card-tag self">Self-service</div>
-      <div class="card-title">Manage this device</div>
-      <div class="card-copy">This section controls the device making the current request and continues to work without authentication.</div>
-      <h2>Device Info</h2>
+      <div class="card-tag self">${t('selfService')}</div>
+      <div class="card-title">${t('manageThisDevice')}</div>
+      <div class="card-copy">${t('selfServiceDescription')}</div>
+      <h2>${t('deviceInfo')}</h2>
       <div class="info-row">
-        <span class="info-label">Source IP</span>
+        <span class="info-label">${t('sourceIp')}</span>
         <span class="info-value">${escapeHtml(dev.source_ip || '-')}</span>
       </div>
       <div class="info-row">
-        <span class="info-label">MAC Address</span>
-        <span class="info-value">${escapeHtml(dev.mac || 'unknown')}</span>
+        <span class="info-label">${t('macAddress')}</span>
+        <span class="info-value">${escapeHtml(dev.mac || t('unknown'))}</span>
       </div>
       <div class="info-row">
-        <span class="info-label">All Addresses</span>
+        <span class="info-label">${t('allAddresses')}</span>
         <span class="info-value"><span class="ip-list">${renderIPList(dev)}</span></span>
       </div>
       <div class="info-row">
-        <span class="info-label">Current Policy</span>
+        <span class="info-label">${t('currentPolicy')}</span>
         <span class="info-value" style="font-weight:600;color:#4a90e2">${escapeHtml(dev.policy || '-')}</span>
       </div>
     </div>
     <div class="card">
-      <h2>Select Policy</h2>
+      <h2>${t('selectPolicy')}</h2>
       <div class="policy-grid">${selfPolicyCards}</div>
       <label class="checkbox-row">
         <input type="checkbox" id="flushCt" ${selfState.flushConntrack ? 'checked' : ''} onchange="selfState.flushConntrack=this.checked">
-        Interrupt existing connections
+        ${t('interruptConnections')}
       </label>
     </div>
     <div class="card admin-card">
       <div class="card-tag admin">Admin</div>
-      <div class="card-title">Manage another device</div>
-      <div class="card-copy">Use the pre-shared key and a target IP to resolve a different device, then apply a policy through the protected admin endpoints. The PSK stays only in this page state.</div>
+      <div class="card-title">${t('manageAnotherDevice')}</div>
+      <div class="card-copy">${t('adminDescription')}</div>
       ${renderStatus(adminState.statusMessage, adminState.statusType, 'inline-status')}
       <div class="field-grid">
         <label>
-          <span class="field-label">Pre-shared key</span>
+          <span class="field-label">${t('preSharedKey')}</span>
           <input
             class="text-input"
             type="password"
             autocomplete="new-password"
-            placeholder="Enter admin PSK"
+            placeholder="${t('enterPskPlaceholder')}"
             value="${escapeHtml(adminState.psk)}"
             ${adminEnabled ? '' : 'disabled'}
             oninput="adminState.psk=this.value"
           >
         </label>
         <label>
-          <span class="field-label">Target IP</span>
+          <span class="field-label">${t('targetIp')}</span>
           <input
             class="text-input"
             type="text"
             inputmode="text"
             spellcheck="false"
-            placeholder="192.168.1.42 or 2001:db8::42"
+            placeholder="${t('ipPlaceholder')}"
             value="${escapeHtml(adminState.ip)}"
             ${adminEnabled ? '' : 'disabled'}
             oninput="adminState.ip=this.value"
@@ -522,7 +800,7 @@ function render() {
         </label>
       </div>
       <button class="action-button" onclick="lookupAdminDevice()" ${!adminEnabled || adminState.loading || adminState.applying ? 'disabled' : ''}>
-        ${adminState.loading ? 'Resolving device...' : 'Resolve remote device'}
+        ${adminState.loading ? t('resolvingDevice') : t('resolveDevice')}
       </button>
       ${adminPanel}
     </div>
@@ -533,7 +811,7 @@ async function setPolicy(name) {
   if (applying) return;
   if (deviceData && deviceData.policy === name) return;
   applying = true;
-  showStatus('Applying policy: ' + name + '...', 'info');
+  showStatus(t('applyPolicy') + name + '...', 'info');
   render();
   try {
     const res = await fetch('/api/policy', {
@@ -545,10 +823,10 @@ async function setPolicy(name) {
     if (!res.ok) throw new Error((data && data.error) || 'Failed');
     deviceData = data;
     render();
-    showStatus('Policy set to: ' + name, 'ok');
+    showStatus(t('policySetTo') + name, 'ok');
   } catch (e) {
     render();
-    showStatus('Error: ' + e.message, 'err');
+    showStatus(t('error') + e.message, 'err');
   } finally {
     applying = false;
     render();
@@ -558,7 +836,7 @@ async function setPolicy(name) {
 async function lookupAdminDevice() {
   if (adminState.loading || adminState.applying) return;
   if (!adminEnabled) {
-    adminState.statusMessage = 'Remote admin management is disabled on this server.';
+    adminState.statusMessage = t('adminManagementDisabled');
     adminState.statusType = 'err';
     render();
     return;
@@ -568,14 +846,14 @@ async function lookupAdminDevice() {
   const ip = adminState.ip.trim();
 
   if (!psk) {
-    adminState.statusMessage = 'Enter the admin PSK before resolving another device.';
+    adminState.statusMessage = t('enterPsk');
     adminState.statusType = 'err';
     render();
     return;
   }
 
   if (!ip) {
-    adminState.statusMessage = 'Enter the target IP to resolve another device.';
+    adminState.statusMessage = t('enterTargetIp');
     adminState.statusType = 'err';
     render();
     return;
@@ -584,7 +862,7 @@ async function lookupAdminDevice() {
   adminState.loading = true;
   adminState.lookupIP = '';
   adminState.device = null;
-  adminState.statusMessage = 'Resolving remote device ' + ip + '...';
+  adminState.statusMessage = t('resolveDeviceStarted') + ip + '...';
   adminState.statusType = 'info';
   render();
 
@@ -596,10 +874,10 @@ async function lookupAdminDevice() {
     if (!res.ok) throw new Error((data && data.error) || 'Failed to resolve device');
     adminState.lookupIP = ip;
     adminState.device = data;
-    adminState.statusMessage = 'Remote device resolved: ' + ip;
+    adminState.statusMessage = t('deviceResolved') + ip;
     adminState.statusType = 'ok';
   } catch (e) {
-    adminState.statusMessage = 'Error: ' + e.message;
+    adminState.statusMessage = t('error') + e.message;
     adminState.statusType = 'err';
   } finally {
     adminState.loading = false;
@@ -610,20 +888,20 @@ async function lookupAdminDevice() {
 async function setAdminPolicy(name) {
   if (adminState.loading || adminState.applying) return;
   if (!adminEnabled) {
-    adminState.statusMessage = 'Remote admin management is disabled on this server.';
+    adminState.statusMessage = t('adminManagementDisabled');
     adminState.statusType = 'err';
     render();
     return;
   }
   const psk = adminState.psk.trim();
   if (!adminState.lookupIP || !adminState.device) {
-    adminState.statusMessage = 'Resolve a remote device before changing its policy.';
+    adminState.statusMessage = t('resolveFirstDevice');
     adminState.statusType = 'err';
     render();
     return;
   }
   if (!psk) {
-    adminState.statusMessage = 'Enter the admin PSK before changing another device.';
+    adminState.statusMessage = t('enterPskForAdmin');
     adminState.statusType = 'err';
     render();
     return;
@@ -631,7 +909,7 @@ async function setAdminPolicy(name) {
   if (adminState.device.policy === name) return;
 
   adminState.applying = true;
-  adminState.statusMessage = 'Applying remote policy: ' + name + '...';
+  adminState.statusMessage = t('applyRemotePolicy') + name + '...';
   adminState.statusType = 'info';
   render();
 
@@ -651,10 +929,10 @@ async function setAdminPolicy(name) {
     const data = await readJSON(res);
     if (!res.ok) throw new Error((data && data.error) || 'Failed');
     adminState.device = data;
-    adminState.statusMessage = 'Remote policy set to: ' + name;
+    adminState.statusMessage = t('remotePolicySetTo') + name;
     adminState.statusType = 'ok';
   } catch (e) {
-    adminState.statusMessage = 'Error: ' + e.message;
+    adminState.statusMessage = t('error') + e.message;
     adminState.statusType = 'err';
   } finally {
     adminState.applying = false;
@@ -662,6 +940,7 @@ async function setAdminPolicy(name) {
   }
 }
 
+detectLanguage();
 load();
 </script>
 </body>

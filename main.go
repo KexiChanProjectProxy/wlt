@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,7 +12,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	_ "embed"
 )
 
 //go:embed web/index.html
@@ -66,6 +66,14 @@ func run() error {
 		log.Printf("NFT sets rebuilt from state")
 	}
 
+	reconciler := DefaultReconciler(cfg)
+	reconcileCtx, reconcileCancel := context.WithCancel(context.Background())
+	go func() {
+		if err := reconciler.Start(reconcileCtx); err != nil && reconcileCtx.Err() == nil {
+			log.Printf("reconciler stopped: %v", err)
+		}
+	}()
+
 	// Start HTTP server
 	srv := NewServer(cfg, state, nft)
 	httpSrv := &http.Server{
@@ -93,6 +101,8 @@ func run() error {
 	case sig := <-sigCh:
 		log.Printf("Received signal: %v, shutting down...", sig)
 	}
+
+	reconcileCancel()
 
 	// Graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
