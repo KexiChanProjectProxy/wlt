@@ -630,7 +630,7 @@
   
   .topk-header {
     display: grid;
-    grid-template-columns: 24px 1fr 1fr 60px 60px 60px 60px;
+    grid-template-columns: 24px 1fr 70px 70px 70px 70px;
     gap: var(--space-xs);
     padding: var(--space-xs) 0;
     border-bottom: 1px solid var(--border);
@@ -643,7 +643,7 @@
   
   .topk-row {
     display: grid;
-    grid-template-columns: 24px 1fr 1fr 60px 60px 60px 60px;
+    grid-template-columns: 24px 1fr 70px 70px 70px 70px;
     gap: var(--space-xs);
     padding: var(--space-xs) 0;
     border-bottom: 1px solid var(--border-light);
@@ -660,7 +660,7 @@
     font-size: 0.7rem;
   }
   
-  .topk-ip, .topk-mac {
+  .topk-ip {
     font-family: monospace;
     font-size: 0.68rem;
     word-break: break-all;
@@ -1180,7 +1180,7 @@ function render() {
     ` : '';
 
     const topKWindow = adminState.topKWindow || 'today';
-    const adminTopKCard = !adminEnabled ? '' : `
+    const adminTopKCard = !adminState.psk ? '' : `
       <div class="card admin-card">
         <div class="card-tag admin">${t('topKUsers')}</div>
         <div class="card-title">${t('topKUsersTitle')}</div>
@@ -1201,7 +1201,6 @@ function render() {
             <div class="topk-header">
               <span>#</span>
               <span>${t('ipAddress')}</span>
-              <span>${t('macAddress')}</span>
               <span>${t('policy')}</span>
               <span>${t('download')}</span>
               <span>${t('upload')}</span>
@@ -1211,7 +1210,6 @@ function render() {
             <div class="topk-row">
               <span class="topk-rank">${i + 1}</span>
               <span class="topk-ip">${escapeHtml(entry.ip || '-')}</span>
-              <span class="topk-mac">${escapeHtml(entry.mac || '-')}</span>
               <span class="topk-policy">${escapeHtml(entry.policy || '-')}</span>
               <span class="topk-download">${formatBytes(entry.download || 0)}</span>
               <span class="topk-upload">${formatBytes(entry.upload || 0)}</span>
