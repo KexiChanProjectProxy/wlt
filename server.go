@@ -55,6 +55,7 @@ func NewServer(cfg *Config, state *State, nft devicePolicySetter) *Server {
 	if cfg.AdminPSK != "" {
 		mux.Handle("/api/admin/device", s.adminOnly(http.HandlerFunc(s.handleAdminDevice)))
 		mux.Handle("/api/admin/policy", s.adminOnly(http.HandlerFunc(s.handleAdminSetPolicy)))
+		mux.Handle("/api/admin/traffic", s.adminOnly(http.HandlerFunc(s.handleAdminTraffic)))
 	}
 	s.handler = mux
 	return s
@@ -267,6 +268,12 @@ func (s *Server) resolveGetTarget(r *http.Request) (*deviceTarget, error) {
 	}
 	mac, err := lookupMACFunc(srcIP)
 	if err != nil {
+		// Fallback: try to find MAC from state file by IP
+		if existing := s.findStateByIP(srcIP); existing != nil {
+			if mac, parseErr := parseMACFunc(existing.MAC); parseErr == nil {
+				return &deviceTarget{mac: mac, sourceIP: srcIP}, nil
+			}
+		}
 		return &deviceTarget{sourceIP: srcIP}, fmt.Errorf("lookup MAC: %w", err)
 	}
 	return &deviceTarget{mac: mac, sourceIP: srcIP}, nil
@@ -284,6 +291,11 @@ func (s *Server) resolvePostTarget(r *http.Request, req setPolicyRequest) (*devi
 	}
 	mac, err := lookupMACFunc(srcIP)
 	if err != nil {
+		if existing := s.findStateByIP(srcIP); existing != nil {
+			if mac, parseErr := parseMACFunc(existing.MAC); parseErr == nil {
+				return &deviceTarget{mac: mac, sourceIP: srcIP}, nil
+			}
+		}
 		return &deviceTarget{sourceIP: srcIP}, fmt.Errorf("lookup MAC: %w", err)
 	}
 	return &deviceTarget{mac: mac, sourceIP: srcIP}, nil
@@ -471,6 +483,54 @@ func (s *Server) handleAdminDevice(w http.ResponseWriter, r *http.Request) {
 		resp.SourceIP = target.sourceIP.String()
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func (s *Server) handleAdminTraffic(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if err := requireIPSelector(r.URL.Query().Get("mac"), r.URL.Query().Get("ip")); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	target, err := s.parseSelector("", r.URL.Query().Get("ip"))
+	if err != nil {
+		if target != nil && target.sourceIP != nil && target.mac == nil {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if target == nil || target.mac == nil {
+		writeError(w, http.StatusNotFound, errString(err, "device not found"))
+		return
+	}
+
+	iface := r.URL.Query().Get("iface")
+
+	result := trafficResponse{}
+	for _, win := range []string{"today", "7days", "month"} {
+		stats, err := s.fetchTrafficForWindow(target.mac.String(), win, iface)
+		if err != nil {
+			continue
+		}
+		switch win {
+		case "today":
+			result.Today = stats
+		case "7days":
+			result.Week = stats
+		case "month":
+			result.Month = stats
+		}
+	}
+
+	writeJSON(w, http.StatusOK, result)
 }
 
 type policyResponse struct {

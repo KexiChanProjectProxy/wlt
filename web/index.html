@@ -802,6 +802,7 @@ let adminState = {
   ip: '',
   lookupIP: '',
   device: null,
+  trafficData: null,
   statusMessage: '',
   statusType: 'info',
   loading: false,
@@ -1009,6 +1010,56 @@ function render() {
           <input type="checkbox" ${adminState.flushConntrack ? 'checked' : ''} onchange="adminState.flushConntrack=this.checked">
           ${t('interruptConnections')}
         </label>
+        ${adminState.trafficData ? `
+        <h2 style="margin-top:var(--space-lg)">${t('trafficUsage')}</h2>
+        <div class="traffic-section">
+          <div class="traffic-period">
+            <h3>${t('today')}</h3>
+            <div class="info-row">
+              <span class="info-label">${t('upload')}</span>
+              <span class="info-value">${formatBytes(adminState.trafficData.today.upload)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">${t('download')}</span>
+              <span class="info-value">${formatBytes(adminState.trafficData.today.download)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">${t('total')}</span>
+              <span class="info-value">${formatBytes(adminState.trafficData.today.total)}</span>
+            </div>
+          </div>
+          <div class="traffic-period">
+            <h3>${t('thisWeek')}</h3>
+            <div class="info-row">
+              <span class="info-label">${t('upload')}</span>
+              <span class="info-value">${formatBytes(adminState.trafficData.week.upload)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">${t('download')}</span>
+              <span class="info-value">${formatBytes(adminState.trafficData.week.download)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">${t('total')}</span>
+              <span class="info-value">${formatBytes(adminState.trafficData.week.total)}</span>
+            </div>
+          </div>
+          <div class="traffic-period">
+            <h3>${t('thisMonth')}</h3>
+            <div class="info-row">
+              <span class="info-label">${t('upload')}</span>
+              <span class="info-value">${formatBytes(adminState.trafficData.month.upload)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">${t('download')}</span>
+              <span class="info-value">${formatBytes(adminState.trafficData.month.download)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">${t('total')}</span>
+              <span class="info-value">${formatBytes(adminState.trafficData.month.total)}</span>
+            </div>
+          </div>
+        </div>
+        ` : ''}
       </div>
     ` : `
       <div class="empty-state">
@@ -1207,8 +1258,16 @@ async function lookupAdminDevice() {
     if (!res.ok) throw new Error((data && data.error) || 'Failed to resolve device');
     adminState.lookupIP = ip;
     adminState.device = data;
+    adminState.trafficData = null;
     adminState.statusMessage = t('deviceResolved') + ip;
     adminState.statusType = 'ok';
+
+    const trafficRes = await fetch('/api/admin/traffic?ip=' + encodeURIComponent(ip), {
+      headers: {'X-WLT-PSK': psk}
+    });
+    if (trafficRes.ok) {
+      adminState.trafficData = await trafficRes.json();
+    }
   } catch (e) {
     adminState.statusMessage = t('error') + e.message;
     adminState.statusType = 'err';
