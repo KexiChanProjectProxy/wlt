@@ -197,6 +197,7 @@ wlt/
 | `GET` | `/api/admin/device?ip=...` | 按 IP 查询指定设备的信息和策略 |
 | `POST` | `/api/admin/policy` | 为指定设备设置策略 |
 | `GET` | `/api/admin/traffic?ip=...` | 按 IP 查询指定设备的流量统计 |
+| `GET` | `/api/admin/topk-traffic?window=...` | 查询流量排行最高的 K 个设备 |
 
 ### 流量统计接口
 

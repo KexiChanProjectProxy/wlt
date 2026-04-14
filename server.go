@@ -56,6 +56,7 @@ func NewServer(cfg *Config, state *State, nft devicePolicySetter) *Server {
 		mux.Handle("/api/admin/device", s.adminOnly(http.HandlerFunc(s.handleAdminDevice)))
 		mux.Handle("/api/admin/policy", s.adminOnly(http.HandlerFunc(s.handleAdminSetPolicy)))
 		mux.Handle("/api/admin/traffic", s.adminOnly(http.HandlerFunc(s.handleAdminTraffic)))
+		mux.Handle("/api/admin/topk-traffic", s.adminOnly(http.HandlerFunc(s.handleAdminTopKTraffic)))
 	}
 	s.handler = mux
 	return s
@@ -841,6 +842,185 @@ func (s *Server) handleTraffic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, result)
+}
+
+func (s *Server) handleAdminTopKTraffic(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	k := 10
+	if kStr := r.URL.Query().Get("k"); kStr != "" {
+		if parsed, err := parseTrafficAPIVersion(kStr); err == nil && parsed > 0 && parsed <= 100 {
+			k = parsed
+		}
+	}
+	window := r.URL.Query().Get("window")
+	if window == "" {
+		window = "today"
+	}
+	validWindows := map[string]bool{"today": true, "7days": true, "month": true}
+	if !validWindows[window] {
+		writeError(w, http.StatusBadRequest, "invalid window")
+		return
+	}
+	iface := r.URL.Query().Get("iface")
+
+	if s.trafficAPIURL == "" {
+		writeJSON(w, http.StatusOK, []topKEntry{})
+		return
+	}
+
+	url := fmt.Sprintf("%s/api/v1/traffic?window=%s&limit=100", s.trafficAPIURL, window)
+	if iface != "" {
+		url += "&iface=" + iface
+	}
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	resp, err := s.trafficHTTPClient.Do(req)
+	if err != nil {
+		writeJSON(w, http.StatusOK, []topKEntry{})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		writeJSON(w, http.StatusOK, []topKEntry{})
+		return
+	}
+
+	var apiResp struct {
+		Records []trafficRecord `json:"records"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
+		writeJSON(w, http.StatusOK, []topKEntry{})
+		return
+	}
+
+	type agg struct {
+		mac       string
+		upload    uint64
+		download  uint64
+		total     uint64
+		primaryIP string
+		policy    string
+	}
+	aggMap := make(map[string]*agg)
+
+	for _, rec := range apiResp.Records {
+		if rec.MAC == "" {
+			continue
+		}
+		if isBroadcastMAC(rec.MAC) {
+			continue
+		}
+
+		e, ok := aggMap[rec.MAC]
+		if !ok {
+			e = &agg{mac: rec.MAC}
+			aggMap[rec.MAC] = e
+		}
+		e.upload += rec.EgressBytes
+		e.download += rec.IngressBytes
+		e.total += rec.TotalBytes
+	}
+
+	if len(aggMap) == 0 {
+		writeJSON(w, http.StatusOK, []topKEntry{})
+		return
+	}
+
+	devices := s.state.All()
+	macToDev := make(map[string]*DeviceState)
+	for _, dev := range devices {
+		macToDev[dev.MAC] = dev
+	}
+
+	entries := make([]topKEntry, 0, len(aggMap))
+	for mac, e := range aggMap {
+		var ip string
+		var policy string
+		if dev, ok := macToDev[mac]; ok && dev != nil {
+			policy = dev.Policy
+			for _, candidate := range dev.IPv4s {
+				if candidate != "" {
+					ip = candidate
+					break
+				}
+			}
+			if ip == "" {
+				for _, candidate := range dev.IPv6s {
+					if candidate != "" {
+						ip = candidate
+						break
+					}
+				}
+			}
+		}
+		entries = append(entries, topKEntry{
+			IP:       ip,
+			MAC:      mac,
+			Upload:   e.upload,
+			Download: e.download,
+			Total:    e.total,
+			Policy:   policy,
+		})
+	}
+
+	sortTopK(entries)
+
+	if len(entries) > k {
+		entries = entries[:k]
+	}
+
+	writeJSON(w, http.StatusOK, entries)
+}
+
+func isBroadcastMAC(mac string) bool {
+	lower := ""
+	for _, c := range mac {
+		if c >= 'A' && c <= 'Z' {
+			lower += string(c + 'a' - 'A')
+		} else {
+			lower += string(c)
+		}
+	}
+	return lower == "ff:ff:ff:ff:ff:ff" || lower == "00:00:00:00:00:00"
+}
+
+func parseTrafficAPIVersion(s string) (int, error) {
+	var v int
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return 0, fmt.Errorf("invalid")
+		}
+		v = v*10 + int(c-'0')
+	}
+	return v, nil
+}
+
+func sortTopK(entries []topKEntry) {
+	for i := 0; i < len(entries); i++ {
+		for j := i + 1; j < len(entries); j++ {
+			if entries[j].Total > entries[i].Total {
+				entries[i], entries[j] = entries[j], entries[i]
+			}
+		}
+	}
+}
+
+type topKEntry struct {
+	IP       string `json:"ip"`
+	MAC      string `json:"mac"`
+	Upload   uint64 `json:"upload"`
+	Download uint64 `json:"download"`
+	Total    uint64 `json:"total"`
+	Policy   string `json:"policy"`
 }
 
 func (s *Server) fetchTrafficForWindow(mac, window, iface string) (trafficWindowStats, error) {

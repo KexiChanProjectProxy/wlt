@@ -589,6 +589,100 @@
     font-size: 0.78rem;
   }
   
+  .window-selector {
+    display: flex;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+  }
+  
+  .window-btn {
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: var(--heading-font);
+    font-weight: 600;
+  }
+  
+  .window-btn:hover {
+    border-color: var(--primary-purple);
+    color: var(--primary-purple);
+  }
+  
+  .window-btn.active {
+    background: var(--primary-purple);
+    border-color: var(--primary-purple);
+    color: var(--bg);
+  }
+  
+  .topk-refresh {
+    margin-top: var(--space-xs);
+  }
+  
+  .topk-table {
+    width: 100%;
+    font-size: 0.72rem;
+  }
+  
+  .topk-header {
+    display: grid;
+    grid-template-columns: 24px 1fr 1fr 60px 60px 60px 60px;
+    gap: var(--space-xs);
+    padding: var(--space-xs) 0;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+    color: var(--primary-purple);
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    letter-spacing: 0.03em;
+  }
+  
+  .topk-row {
+    display: grid;
+    grid-template-columns: 24px 1fr 1fr 60px 60px 60px 60px;
+    gap: var(--space-xs);
+    padding: var(--space-xs) 0;
+    border-bottom: 1px solid var(--border-light);
+    align-items: center;
+  }
+  
+  .topk-row:last-child {
+    border-bottom: none;
+  }
+  
+  .topk-rank {
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.7rem;
+  }
+  
+  .topk-ip, .topk-mac {
+    font-family: monospace;
+    font-size: 0.68rem;
+    word-break: break-all;
+  }
+  
+  .topk-policy {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--primary);
+  }
+  
+  .topk-download, .topk-upload, .topk-total {
+    text-align: right;
+    font-size: 0.68rem;
+    font-family: monospace;
+  }
+  
+  .topk-total {
+    font-weight: 700;
+    color: var(--primary-purple);
+  }
+  
   .lang-selector {
     position: fixed;
     top: var(--space-md);
@@ -682,7 +776,13 @@ const translations = {
     resolvedDevice: "Found Device",
     lookupIp: "Lookup IP",
     setRemotePolicy: "Change how it connects",
-    enterPskAndTargetIp: "Enter the access password and target IP, then look up the device to see its connection and addresses."
+    enterPskAndTargetIp: "Enter the access password and target IP, then look up the device to see its connection and addresses.",
+    topKUsers: "Top K Users",
+    topKUsersTitle: "Top IPv4 Users by Traffic",
+    selectWindow: "Period",
+    noData: "No traffic data",
+    clickRefresh: "Click refresh to load",
+    refresh: "Refresh"
   },
   zh: {
     title: "网络通",
@@ -733,7 +833,13 @@ const translations = {
     resolvedDevice: "已找到设备",
     lookupIp: "查找IP",
     setRemotePolicy: "更改连接方式",
-    enterPskAndTargetIp: "输入访问密码和目标IP，然后查找设备以查看其连接和地址。"
+    enterPskAndTargetIp: "输入访问密码和目标IP，然后查找设备以查看其连接和地址。",
+    topKUsers: "流量排行",
+    topKUsersTitle: "IPv4 用户流量排行",
+    selectWindow: "时间段",
+    noData: "暂无流量数据",
+    clickRefresh: "点击刷新加载",
+    refresh: "刷新"
   },
   ja: {
     title: "WLT",
@@ -784,7 +890,13 @@ const translations = {
     resolvedDevice: "見つかったデバイス",
     lookupIp: "IP検索",
     setRemotePolicy: "接続方法を変更",
-    enterPskAndTargetIp: "アクセスパスワードとターゲットIPを入力し、デバイスを検索してその接続とアドレスを確認してください。"
+    enterPskAndTargetIp: "アクセスパスワードとターゲットIPを入力し、デバイスを検索してその接続とアドレスを確認してください。",
+    topKUsers: "トラフィック排行",
+    topKUsersTitle: "IPv4 ユーザートラフィックランキング",
+    selectWindow: "期間",
+    noData: "トラフィックデータなし",
+    clickRefresh: "更新をクリックしてロード",
+    refresh: "更新"
   }
 };
 
@@ -803,6 +915,8 @@ let adminState = {
   lookupIP: '',
   device: null,
   trafficData: null,
+  topKData: null,
+  topKWindow: 'today',
   statusMessage: '',
   statusType: 'info',
   loading: false,
@@ -1065,6 +1179,55 @@ function render() {
       </div>
     ` : '';
 
+    const topKWindow = adminState.topKWindow || 'today';
+    const adminTopKCard = !adminEnabled ? '' : `
+      <div class="card admin-card">
+        <div class="card-tag admin">${t('topKUsers')}</div>
+        <div class="card-title">${t('topKUsersTitle')}</div>
+        <div class="traffic-section">
+          <div class="traffic-period">
+            <h3>${t('selectWindow')}</h3>
+            <div class="window-selector">
+              <button class="window-btn ${topKWindow === 'today' ? 'active' : ''}" onclick="setTopKWindow('today')">${t('today')}</button>
+              <button class="window-btn ${topKWindow === '7days' ? 'active' : ''}" onclick="setTopKWindow('7days')">${t('thisWeek')}</button>
+              <button class="window-btn ${topKWindow === 'month' ? 'active' : ''}" onclick="setTopKWindow('month')">${t('thisMonth')}</button>
+            </div>
+            <div class="topk-refresh">
+              <button class="window-btn" onclick="fetchTopK()">${t('refresh')}</button>
+            </div>
+          </div>
+          ${adminState.topKData && adminState.topKData.length > 0 ? `
+          <div class="topk-table">
+            <div class="topk-header">
+              <span>#</span>
+              <span>${t('ipAddress')}</span>
+              <span>${t('macAddress')}</span>
+              <span>${t('policy')}</span>
+              <span>${t('download')}</span>
+              <span>${t('upload')}</span>
+              <span>${t('total')}</span>
+            </div>
+            ${adminState.topKData.map((entry, i) => `
+            <div class="topk-row">
+              <span class="topk-rank">${i + 1}</span>
+              <span class="topk-ip">${escapeHtml(entry.ip || '-')}</span>
+              <span class="topk-mac">${escapeHtml(entry.mac || '-')}</span>
+              <span class="topk-policy">${escapeHtml(entry.policy || '-')}</span>
+              <span class="topk-download">${formatBytes(entry.download || 0)}</span>
+              <span class="topk-upload">${formatBytes(entry.upload || 0)}</span>
+              <span class="topk-total">${formatBytes(entry.total || 0)}</span>
+            </div>
+            `).join('')}
+          </div>
+          ` : adminState.topKData && adminState.topKData.length === 0 ? `
+          <div class="info-row"><span class="info-label">${t('noData')}</span><span class="info-value">-</span></div>
+          ` : `
+          <div class="info-row"><span class="info-label">${t('clickRefresh')}</span><span class="info-value">-</span></div>
+          `}
+        </div>
+      </div>
+    `;
+
     const adminResolveCard = !adminEnabled ? `
       <div class="card admin-card">
         <div class="card-tag admin">Administrator</div>
@@ -1195,6 +1358,7 @@ function render() {
         ${adminDeviceCard}
         ${adminPolicyCard}
         ${adminTrafficCard}
+        ${adminTopKCard}
       </div>
     `;
   }
@@ -1277,6 +1441,45 @@ async function lookupAdminDevice() {
       adminState.trafficData = await trafficRes.json();
     }
   } catch (e) {
+    adminState.statusMessage = t('error') + e.message;
+    adminState.statusType = 'err';
+  } finally {
+    adminState.loading = false;
+    render();
+  }
+}
+
+function setTopKWindow(win) {
+  adminState.topKWindow = win;
+  render();
+}
+
+async function fetchTopK() {
+  const psk = adminState.psk.trim();
+  if (!psk) {
+    adminState.statusMessage = t('enterPsk');
+    adminState.statusType = 'err';
+    render();
+    return;
+  }
+  adminState.loading = true;
+  adminState.statusMessage = t('loading') + '...';
+  adminState.statusType = 'info';
+  render();
+  try {
+    const url = '/api/admin/topk-traffic?window=' + encodeURIComponent(adminState.topKWindow || 'today');
+    const res = await fetch(url, {
+      headers: {'X-WLT-PSK': psk}
+    });
+    if (res.ok) {
+      adminState.topKData = await res.json();
+    } else {
+      adminState.topKData = [];
+    }
+    adminState.statusMessage = t('done');
+    adminState.statusType = 'ok';
+  } catch (e) {
+    adminState.topKData = [];
     adminState.statusMessage = t('error') + e.message;
     adminState.statusType = 'err';
   } finally {
