@@ -983,7 +983,6 @@ function render() {
       </div>
     ` : adminState.device ? `
       <div class="admin-panel">
-        <h2>${t('resolvedDevice')}</h2>
         <div class="info-row">
           <span class="info-label">${t('lookupIp')}</span>
           <span class="info-value">${escapeHtml(adminState.lookupIP || '-')}</span>
@@ -1011,7 +1010,13 @@ function render() {
           ${t('interruptConnections')}
         </label>
       </div>
-      ${adminState.trafficData ? `
+    ` : `
+      <div class="empty-state">
+        ${t('enterPskAndTargetIp')}
+      </div>
+    `;
+
+    const adminTrafficCard = adminState.trafficData ? `
       <div class="card admin-card">
         <div class="card-tag admin">${t('trafficUsage')}</div>
         <div class="card-title">${t('trafficUsage')} - ${escapeHtml(adminState.lookupIP)}</div>
@@ -1063,12 +1068,7 @@ function render() {
           </div>
         </div>
       </div>
-      ` : ''}
-    ` : `
-      <div class="empty-state">
-        ${t('enterPskAndTargetIp')}
-      </div>
-    `;
+    ` : '';
 
     app.innerHTML = `
       <div class="card-grid">
@@ -1190,9 +1190,10 @@ function render() {
           </button>
           ${adminPanel}
         </div>
+        ${adminTrafficCard}
       </div>
     `;
-}
+  }
 
 async function setPolicy(name) {
   if (applying) return;
