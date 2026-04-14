@@ -1010,8 +1010,11 @@ function render() {
           <input type="checkbox" ${adminState.flushConntrack ? 'checked' : ''} onchange="adminState.flushConntrack=this.checked">
           ${t('interruptConnections')}
         </label>
-        ${adminState.trafficData ? `
-        <h2 style="margin-top:var(--space-lg)">${t('trafficUsage')}</h2>
+      </div>
+      ${adminState.trafficData ? `
+      <div class="card admin-card">
+        <div class="card-tag admin">${t('trafficUsage')}</div>
+        <div class="card-title">${t('trafficUsage')} - ${escapeHtml(adminState.lookupIP)}</div>
         <div class="traffic-section">
           <div class="traffic-period">
             <h3>${t('today')}</h3>
@@ -1059,8 +1062,8 @@ function render() {
             </div>
           </div>
         </div>
-        ` : ''}
       </div>
+      ` : ''}
     ` : `
       <div class="empty-state">
         ${t('enterPskAndTargetIp')}
