@@ -630,7 +630,7 @@
   
   .topk-header {
     display: grid;
-    grid-template-columns: 24px 1fr 70px 70px 70px 70px;
+    grid-template-columns: 24px 1.5fr 70px 75px 75px 75px;
     gap: var(--space-xs);
     padding: var(--space-xs) 0;
     border-bottom: 1px solid var(--border);
@@ -643,7 +643,7 @@
   
   .topk-row {
     display: grid;
-    grid-template-columns: 24px 1fr 70px 70px 70px 70px;
+    grid-template-columns: 24px 1.5fr 70px 75px 75px 75px;
     gap: var(--space-xs);
     padding: var(--space-xs) 0;
     border-bottom: 1px solid var(--border-light);
@@ -1210,7 +1210,7 @@ function render() {
             <div class="topk-row">
               <span class="topk-rank">${i + 1}</span>
               <span class="topk-ip">${escapeHtml(entry.ip || '-')}</span>
-              <span class="topk-policy">${escapeHtml(entry.policy || '-')}</span>
+              <span class="topk-policy">${escapeHtml(entry.policy ?? '-')}</span>
               <span class="topk-download">${formatBytes(entry.download || 0)}</span>
               <span class="topk-upload">${formatBytes(entry.upload || 0)}</span>
               <span class="topk-total">${formatBytes(entry.total || 0)}</span>
