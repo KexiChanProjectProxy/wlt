@@ -804,13 +804,15 @@ func (s *Server) fetchTrafficForWindow(mac, window, iface string) (trafficWindow
 		return trafficWindowStats{}, fmt.Errorf("traffic API returned status %d", resp.StatusCode)
 	}
 
-	var records []trafficRecord
-	if err := json.NewDecoder(resp.Body).Decode(&records); err != nil {
+	var apiResp struct {
+		Records []trafficRecord `json:"records"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
 		return trafficWindowStats{}, err
 	}
 
 	var stats trafficWindowStats
-	for _, rec := range records {
+	for _, rec := range apiResp.Records {
 		if rec.MAC == mac {
 			stats.Upload += rec.EgressBytes
 			stats.Download += rec.IngressBytes
