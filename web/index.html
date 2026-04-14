@@ -977,16 +977,10 @@ function render() {
       ? renderPolicyCards(adminState.device.policy, 'setAdminPolicy', adminState.loading || adminState.applying)
       : '';
 
-    const adminPanel = !adminEnabled ? `
-      <div class="empty-state">
-        ${t('adminManagementDisabled')}
-      </div>
-    ` : adminState.device ? `
-      <div class="admin-panel">
-        <div class="info-row">
-          <span class="info-label">${t('lookupIp')}</span>
-          <span class="info-value">${escapeHtml(adminState.lookupIP || '-')}</span>
-        </div>
+    const adminDeviceCard = !adminEnabled ? '' : adminState.device ? `
+      <div class="card admin-card">
+        <div class="card-tag admin">${t('resolvedDevice')}</div>
+        <div class="card-title">${escapeHtml(adminState.lookupIP)}</div>
         <div class="info-row">
           <span class="info-label">${t('sourceIp')}</span>
           <span class="info-value">${escapeHtml(adminState.device.source_ip || '-')}</span>
@@ -1003,18 +997,19 @@ function render() {
           <span class="info-label">${t('currentPolicy')}</span>
           <span class="info-value" style="font-weight:600;color:var(--primary)">${escapeHtml(adminState.device.policy || '-')}</span>
         </div>
-        <h2 style="margin-top:var(--space-lg)">${t('setRemotePolicy')}</h2>
+      </div>
+    ` : '';
+
+    const adminPolicyCard = !adminEnabled ? '' : adminState.device ? `
+      <div class="card admin-card">
+        <div class="card-tag admin">${t('setRemotePolicy')}</div>
         <div class="policy-grid">${adminPolicyCards}</div>
         <label class="checkbox-row">
           <input type="checkbox" ${adminState.flushConntrack ? 'checked' : ''} onchange="adminState.flushConntrack=this.checked">
           ${t('interruptConnections')}
         </label>
       </div>
-    ` : `
-      <div class="empty-state">
-        ${t('enterPskAndTargetIp')}
-      </div>
-    `;
+    ` : '';
 
     const adminTrafficCard = adminState.trafficData ? `
       <div class="card admin-card">
@@ -1069,6 +1064,49 @@ function render() {
         </div>
       </div>
     ` : '';
+
+    const adminResolveCard = !adminEnabled ? `
+      <div class="card admin-card">
+        <div class="card-tag admin">Administrator</div>
+        <div class="card-title">${t('manageAnotherDevice')}</div>
+        <div class="card-copy">${t('adminManagementDisabled')}</div>
+      </div>
+    ` : `
+      <div class="card admin-card">
+        <div class="card-tag admin">Administrator</div>
+        <div class="card-title">${t('manageAnotherDevice')}</div>
+        <div class="card-copy">${t('adminDescription')}</div>
+        ${renderStatus(adminState.statusMessage, adminState.statusType, 'inline-status')}
+        <div class="field-grid">
+          <label>
+            <span class="field-label">${t('preSharedKey')}</span>
+            <input
+              class="text-input"
+              type="password"
+              autocomplete="new-password"
+              placeholder="${t('enterPskPlaceholder')}"
+              value="${escapeHtml(adminState.psk)}"
+              oninput="adminState.psk=this.value"
+            >
+          </label>
+          <label>
+            <span class="field-label">${t('targetIp')}</span>
+            <input
+              class="text-input"
+              type="text"
+              inputmode="text"
+              spellcheck="false"
+              placeholder="${t('ipPlaceholder')}"
+              value="${escapeHtml(adminState.ip)}"
+              oninput="adminState.ip=this.value"
+            >
+          </label>
+        </div>
+        <button class="action-button" onclick="lookupAdminDevice()" ${adminState.loading || adminState.applying ? 'disabled' : ''}>
+          ${adminState.loading ? t('resolvingDevice') : t('resolveDevice')}
+        </button>
+      </div>
+    `;
 
     app.innerHTML = `
       <div class="card-grid">
@@ -1153,43 +1191,9 @@ function render() {
             ${t('interruptConnections')}
           </label>
         </div>
-        <div class="card admin-card">
-          <div class="card-tag admin">Administrator</div>
-          <div class="card-title">${t('manageAnotherDevice')}</div>
-          <div class="card-copy">${t('adminDescription')}</div>
-          ${renderStatus(adminState.statusMessage, adminState.statusType, 'inline-status')}
-          <div class="field-grid">
-            <label>
-              <span class="field-label">${t('preSharedKey')}</span>
-              <input
-                class="text-input"
-                type="password"
-                autocomplete="new-password"
-                placeholder="${t('enterPskPlaceholder')}"
-                value="${escapeHtml(adminState.psk)}"
-                ${adminEnabled ? '' : 'disabled'}
-                oninput="adminState.psk=this.value"
-              >
-            </label>
-            <label>
-              <span class="field-label">${t('targetIp')}</span>
-              <input
-                class="text-input"
-                type="text"
-                inputmode="text"
-                spellcheck="false"
-                placeholder="${t('ipPlaceholder')}"
-                value="${escapeHtml(adminState.ip)}"
-                ${adminEnabled ? '' : 'disabled'}
-                oninput="adminState.ip=this.value"
-              >
-            </label>
-          </div>
-          <button class="action-button" onclick="lookupAdminDevice()" ${!adminEnabled || adminState.loading || adminState.applying ? 'disabled' : ''}>
-            ${adminState.loading ? t('resolvingDevice') : t('resolveDevice')}
-          </button>
-          ${adminPanel}
-        </div>
+        ${adminResolveCard}
+        ${adminDeviceCard}
+        ${adminPolicyCard}
         ${adminTrafficCard}
       </div>
     `;
