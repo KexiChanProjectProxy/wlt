@@ -85,6 +85,7 @@ wlt/
   "cleanup_on_exit": true,
   "state_path": "/var/lib/wlt/state.json",
   "admin_psk": "change-me-to-a-long-random-string",
+  "traffic_api_url": "http://127.0.0.1:8081",
   "default_policy": "direct",
   "policies": [
     {"name": "direct", "mark": 1, "description": "直接连接"},
@@ -107,6 +108,7 @@ wlt/
 | `cleanup_on_exit` | bool | 退出时是否清空 set 元素（恢复无标记状态） |
 | `state_path` | string | 设备策略状态文件路径 |
 | `admin_psk` | string | 管理接口使用的预共享密钥，请通过 `X-WLT-PSK` 请求头传入。为空时管理接口禁用 |
+| `traffic_api_url` | string | traffic-count 服务 API 地址（用于流量统计展示），如 `http://127.0.0.1:8081`。为空时流量统计功能禁用 |
 | `default_policy` | string | 新设备首次访问时自动分配的策略名 |
 | `policies` | []Policy | 策略列表，见下表 |
 
@@ -195,6 +197,33 @@ wlt/
 | `GET` | `/api/admin/device?ip=...` | 按 IP 查询指定设备的信息和策略 |
 | `POST` | `/api/admin/policy` | 为指定设备设置策略 |
 
+### 流量统计接口
+
+启用流量统计需要部署 [wlt-traffic](https://github.com/KexiChanProjectProxy/wlt-traffic) 服务，并在配置中设置 `traffic_api_url`。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `GET` | `/api/traffic` | 返回当前设备的流量统计（今日/本周/本月） |
+
+#### GET /api/traffic
+
+响应示例：
+
+```json
+{
+  "today": {"upload": 1234567, "download": 9876543, "total": 11111110},
+  "week": {"upload": 8765432, "download": 6543210, "total": 15308642},
+  "month": {"upload": 34567890, "download": 23456789, "total": 58024679}
+}
+```
+
+字段说明：
+- `upload`：出站字节数（从设备发出）
+- `download`：入站字节数（设备接收）
+- `total`：合计字节数
+
+当 `traffic_api_url` 为空或 traffic-count 服务不可用时，返回全零数据。
+
 查询指定 IP 的设备：
 
 ```bash
@@ -277,6 +306,52 @@ ip route add default via 192.168.1.1 table 200
 ```
 
 由于 nftables ingress 钩子在 prerouting 之前执行，标记在路由决策前已经完成。
+
+---
+
+## 流量统计（可选）
+
+wlt 支持通过集成 [wlt-traffic](https://github.com/KexiChanProjectProxy/wlt-traffic) 服务显示设备流量使用情况。
+
+### 架构
+
+```
+wlt Web UI (port 8080)
+       │
+       │ /api/traffic
+       ▼
+wlt server.go ──────► wlt-traffic API (127.0.0.1:8081)
+                            │
+                            ▼
+                       SQLite 数据库
+                       (/var/lib/traffic-count/traffic-count.db)
+```
+
+wlt 本身不采集流量数据，只是代理到 wlt-traffic 服务查询，并以 MB/GB 等人类可读格式在 Web UI 中展示。
+
+### 部署 wlt-traffic
+
+参考 [wlt-traffic 文档](https://github.com/KexiChanProjectProxy/wlt-traffic)。
+
+### 配置 wlt
+
+在 wlt 的 `config.json` 中添加 `traffic_api_url`：
+
+```json
+{
+  "listen": ":8080",
+  "traffic_api_url": "http://127.0.0.1:8081",
+  ...
+}
+```
+
+wlt 会将请求转发到 wlt-traffic 的 `GET /api/v1/traffic` 接口，按 MAC 聚合今日/本周/本月的入站/出站流量。
+
+### 注意事项
+
+- wlt-traffic 必须与 wlt 部署在同一台机器上（仅监听 localhost）
+- wlt 对 traffic-count API 调用有 5 秒超时，服务不可用时 Web UI 显示为零而不报错
+- wlt 不管理 wlt-traffic 的生命周期，需要独立部署和运维
 
 ---
 
