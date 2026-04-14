@@ -629,25 +629,23 @@
   }
   
   .topk-header {
-    display: grid;
-    grid-template-columns: 24px 1.5fr 70px 75px 75px 75px;
-    gap: var(--space-xs);
-    padding: var(--space-xs) 0;
+    display: flex;
+    padding: var(--space-xs) var(--space-sm);
     border-bottom: 1px solid var(--border);
     font-weight: 700;
     color: var(--primary-purple);
     text-transform: uppercase;
     font-size: 0.65rem;
     letter-spacing: 0.03em;
+    gap: var(--space-xs);
   }
   
   .topk-row {
-    display: grid;
-    grid-template-columns: 24px 1.5fr 70px 75px 75px 75px;
-    gap: var(--space-xs);
-    padding: var(--space-xs) 0;
+    display: flex;
+    padding: var(--space-xs) var(--space-sm);
     border-bottom: 1px solid var(--border-light);
     align-items: center;
+    gap: var(--space-xs);
   }
   
   .topk-row:last-child {
@@ -658,24 +656,35 @@
     color: var(--text-secondary);
     font-weight: 600;
     font-size: 0.7rem;
+    width: 20px;
+    flex-shrink: 0;
   }
   
   .topk-ip {
     font-family: monospace;
-    font-size: 0.68rem;
-    word-break: break-all;
+    font-size: 0.72rem;
+    flex: 1.5;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   
   .topk-policy {
     font-size: 0.68rem;
     font-weight: 600;
     color: var(--primary);
+    width: 60px;
+    flex-shrink: 0;
+    text-align: center;
   }
   
   .topk-download, .topk-upload, .topk-total {
     text-align: right;
     font-size: 0.68rem;
     font-family: monospace;
+    width: 60px;
+    flex-shrink: 0;
   }
   
   .topk-total {
