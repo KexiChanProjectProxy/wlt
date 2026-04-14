@@ -1218,7 +1218,7 @@ function render() {
             ${adminState.topKData.map((entry, i) => `
             <div class="topk-row">
               <span class="topk-rank">${i + 1}</span>
-              <span class="topk-ip">${escapeHtml(entry.ip || '-')}</span>
+              <span class="topk-ip">${escapeHtml(entry.ip || entry.mac || '-')}</span>
               <span class="topk-policy">${escapeHtml(entry.policy ?? '-')}</span>
               <span class="topk-download">${formatBytes(entry.download || 0)}</span>
               <span class="topk-upload">${formatBytes(entry.upload || 0)}</span>
