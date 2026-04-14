@@ -14,11 +14,13 @@ import (
 )
 
 type Server struct {
-	cfg     *Config
-	state   *State
-	nft     devicePolicySetter
-	mu      sync.Mutex // covers detect+nft+state flow
-	handler http.Handler
+	cfg               *Config
+	state             *State
+	nft               devicePolicySetter
+	mu                sync.Mutex // covers detect+nft+state flow
+	handler           http.Handler
+	trafficHTTPClient *http.Client
+	trafficAPIURL     string
 }
 
 type devicePolicySetter interface {
@@ -38,6 +40,10 @@ func NewServer(cfg *Config, state *State, nft devicePolicySetter) *Server {
 		cfg:   cfg,
 		state: state,
 		nft:   nft,
+		trafficHTTPClient: &http.Client{
+			Timeout: 5 * time.Second,
+		},
+		trafficAPIURL: cfg.TrafficAPIURL,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleIndex)
@@ -45,6 +51,7 @@ func NewServer(cfg *Config, state *State, nft devicePolicySetter) *Server {
 	mux.HandleFunc("/api/features", s.handleFeatures)
 	mux.HandleFunc("/api/policies", s.handlePolicies)
 	mux.HandleFunc("/api/policy", s.handleSetPolicy)
+	mux.HandleFunc("/api/traffic", s.handleTraffic)
 	if cfg.AdminPSK != "" {
 		mux.Handle("/api/admin/device", s.adminOnly(http.HandlerFunc(s.handleAdminDevice)))
 		mux.Handle("/api/admin/policy", s.adminOnly(http.HandlerFunc(s.handleAdminSetPolicy)))
@@ -690,4 +697,126 @@ func errString(err error, fallback string) string {
 		return err.Error()
 	}
 	return fallback
+}
+
+type trafficRecord struct {
+	Interface      string `json:"interface"`
+	Ifindex        int    `json:"ifindex"`
+	MAC            string `json:"mac"`
+	IngressBytes   uint64 `json:"ingress_bytes"`
+	EgressBytes    uint64 `json:"egress_bytes"`
+	TotalBytes     uint64 `json:"total_bytes"`
+	IngressPackets uint64 `json:"ingress_packets"`
+	EgressPackets  uint64 `json:"egress_packets"`
+	TotalPackets   uint64 `json:"total_packets"`
+	Window         string `json:"window"`
+}
+
+type trafficWindowStats struct {
+	Upload   uint64 `json:"upload"`
+	Download uint64 `json:"download"`
+	Total    uint64 `json:"total"`
+}
+
+type trafficResponse struct {
+	Today trafficWindowStats `json:"today"`
+	Week  trafficWindowStats `json:"week"`
+	Month trafficWindowStats `json:"month"`
+}
+
+func (s *Server) handleTraffic(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	window := r.URL.Query().Get("window")
+	iface := r.URL.Query().Get("iface")
+
+	_ = window // window param is available for future use
+
+	target, err := s.resolveGetTarget(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if target.mac == nil {
+		writeJSON(w, http.StatusOK, trafficResponse{
+			Today: trafficWindowStats{},
+			Week:  trafficWindowStats{},
+			Month: trafficWindowStats{},
+		})
+		return
+	}
+
+	macStr := target.mac.String()
+
+	if s.trafficAPIURL == "" {
+		writeJSON(w, http.StatusOK, trafficResponse{
+			Today: trafficWindowStats{},
+			Week:  trafficWindowStats{},
+			Month: trafficWindowStats{},
+		})
+		return
+	}
+
+	windows := []string{"today", "7days", "month"}
+
+	result := trafficResponse{}
+	for _, win := range windows {
+		stats, err := s.fetchTrafficForWindow(macStr, win, iface)
+		if err != nil {
+			// Keep zeros on error (graceful degradation)
+			continue
+		}
+		switch win {
+		case "today":
+			result.Today = stats
+		case "7days":
+			result.Week = stats
+		case "month":
+			result.Month = stats
+		}
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (s *Server) fetchTrafficForWindow(mac, window, iface string) (trafficWindowStats, error) {
+	url := fmt.Sprintf("%s/api/v1/traffic?window=%s&mac=%s&limit=100", s.trafficAPIURL, window, mac)
+	if iface != "" {
+		url += "&iface=" + iface
+	}
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return trafficWindowStats{}, err
+	}
+
+	resp, err := s.trafficHTTPClient.Do(req)
+	if err != nil {
+		return trafficWindowStats{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return trafficWindowStats{}, fmt.Errorf("traffic API returned status %d", resp.StatusCode)
+	}
+
+	var records []trafficRecord
+	if err := json.NewDecoder(resp.Body).Decode(&records); err != nil {
+		return trafficWindowStats{}, err
+	}
+
+	var stats trafficWindowStats
+	for _, rec := range records {
+		if rec.MAC == mac {
+			stats.Upload += rec.EgressBytes
+			stats.Download += rec.IngressBytes
+			stats.Total += rec.TotalBytes
+		}
+	}
+
+	return stats, nil
 }

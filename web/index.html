@@ -561,6 +561,34 @@
     }
   }
   
+  .traffic-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+  
+  .traffic-period h3 {
+    font-family: var(--heading-font);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--primary-purple);
+    margin-bottom: var(--space-xs);
+    font-weight: 600;
+  }
+  
+  .traffic-period .info-row {
+    padding: var(--space-xs) 0;
+  }
+  
+  .traffic-period .info-label {
+    font-size: 0.8rem;
+  }
+  
+  .traffic-period .info-value {
+    font-size: 0.78rem;
+  }
+  
   .lang-selector {
     position: fixed;
     top: var(--space-md);
@@ -612,6 +640,14 @@ const translations = {
     failedLoadDeviceInfo: "Failed to load device information",
     failedLoadPolicies: "Failed to load connection options",
     failedLoadFeatures: "Failed to load server capabilities",
+    trafficUsage: "Traffic Usage",
+    today: "Today",
+    thisWeek: "This Week",
+    thisMonth: "This Month",
+    upload: "Upload",
+    download: "Download",
+    total: "Total",
+    trafficLoadFailed: "Failed to load traffic data",
     applyPolicy: "Applying connection: ",
     policySetTo: "Connection set to: ",
     resolveDevice: "Look up another device",
@@ -655,6 +691,14 @@ const translations = {
     failedLoadDeviceInfo: "加载设备信息失败",
     failedLoadPolicies: "加载连接选项失败",
     failedLoadFeatures: "加载服务器功能失败",
+    trafficUsage: "流量统计",
+    today: "今日",
+    thisWeek: "本周",
+    thisMonth: "本月",
+    upload: "上传",
+    download: "下载",
+    total: "合计",
+    trafficLoadFailed: "加载流量数据失败",
     applyPolicy: "应用连接：",
     policySetTo: "连接已设置为：",
     resolveDevice: "查找其他设备",
@@ -698,6 +742,14 @@ const translations = {
     failedLoadDeviceInfo: "デバイス情報の読み込みに失敗しました",
     failedLoadPolicies: "接続オプションの読み込みに失敗しました",
     failedLoadFeatures: "サーバーカパビリティの読み込みに失敗しました",
+    trafficUsage: "トラフィック統計",
+    today: "今日",
+    thisWeek: "今週",
+    thisMonth: "今月",
+    upload: "アップロード",
+    download: "ダウンロード",
+    total: "合計",
+    trafficLoadFailed: "トラフィックデータの読み込みに失敗しました",
     applyPolicy: "接続を適用中：",
     policySetTo: "接続が設定されました：",
     resolveDevice: "別のデバイスを検索",
@@ -738,6 +790,7 @@ const translations = {
 
 let currentLang = 'en';
 let deviceData = null;
+let trafficData = null;
 let policies = [];
 let applying = false;
 let adminEnabled = false;
@@ -846,12 +899,21 @@ async function readJSON(res) {
   }
 }
 
+function formatBytes(bytes) {
+  if (bytes == null) return '0 B';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+}
+
 async function load() {
   try {
-    const [devRes, polRes, featureRes] = await Promise.all([
+    const [devRes, polRes, featureRes, trafficRes] = await Promise.all([
       fetch('/api/device'),
       fetch('/api/policies'),
-      fetch('/api/features')
+      fetch('/api/features'),
+      fetch('/api/traffic').catch(function() { return {ok: false}; })
     ]);
     if (!devRes.ok) throw new Error(t('failedLoadDeviceInfo'));
     if (!polRes.ok) throw new Error(t('failedLoadPolicies'));
@@ -860,6 +922,11 @@ async function load() {
     policies = await polRes.json();
     const features = await featureRes.json();
     adminEnabled = !!features.admin_enabled;
+    if (trafficRes.ok) {
+      trafficData = await trafficRes.json();
+    } else {
+      trafficData = {today: {upload: 0, download: 0, total: 0}, week: {upload: 0, download: 0, total: 0}, month: {upload: 0, download: 0, total: 0}};
+    }
     
     // Update policy descriptions to be user-friendly
     policies = policies.map(policy => {
@@ -951,6 +1018,57 @@ function render() {
 
     app.innerHTML = `
       <div class="card-grid">
+        <div class="card">
+          <div class="card-tag">${t('trafficUsage')}</div>
+          <div class="card-title">${t('trafficUsage')}</div>
+          <div class="traffic-section">
+            <div class="traffic-period">
+              <h3>${t('today')}</h3>
+              <div class="info-row">
+                <span class="info-label">${t('upload')}</span>
+                <span class="info-value traffic-upload">${formatBytes(trafficData ? trafficData.today.upload : 0)}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">${t('download')}</span>
+                <span class="info-value traffic-download">${formatBytes(trafficData ? trafficData.today.download : 0)}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">${t('total')}</span>
+                <span class="info-value traffic-total">${formatBytes(trafficData ? trafficData.today.total : 0)}</span>
+              </div>
+            </div>
+            <div class="traffic-period">
+              <h3>${t('thisWeek')}</h3>
+              <div class="info-row">
+                <span class="info-label">${t('upload')}</span>
+                <span class="info-value traffic-upload">${formatBytes(trafficData ? trafficData.week.upload : 0)}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">${t('download')}</span>
+                <span class="info-value traffic-download">${formatBytes(trafficData ? trafficData.week.download : 0)}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">${t('total')}</span>
+                <span class="info-value traffic-total">${formatBytes(trafficData ? trafficData.week.total : 0)}</span>
+              </div>
+            </div>
+            <div class="traffic-period">
+              <h3>${t('thisMonth')}</h3>
+              <div class="info-row">
+                <span class="info-label">${t('upload')}</span>
+                <span class="info-value traffic-upload">${formatBytes(trafficData ? trafficData.month.upload : 0)}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">${t('download')}</span>
+                <span class="info-value traffic-download">${formatBytes(trafficData ? trafficData.month.download : 0)}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">${t('total')}</span>
+                <span class="info-value traffic-total">${formatBytes(trafficData ? trafficData.month.total : 0)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="card">
           <div class="card-tag self">${t('myDevice')}</div>
           <div class="card-title">${t('manageThisDevice')}</div>

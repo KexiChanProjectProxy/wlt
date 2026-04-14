@@ -24,6 +24,7 @@ type Config struct {
 	AdminPSK      string   `json:"admin_psk"`
 	DefaultPolicy string   `json:"default_policy"`
 	Policies      []Policy `json:"policies"`
+	TrafficAPIURL string   `json:"traffic_api_url"`
 }
 
 func LoadConfig(path string) (*Config, error) {
