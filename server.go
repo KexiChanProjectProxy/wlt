@@ -925,8 +925,8 @@ func (s *Server) handleAdminTopKTraffic(w http.ResponseWriter, r *http.Request) 
 			e = &agg{mac: rec.MAC}
 			aggMap[rec.MAC] = e
 		}
-		e.upload += rec.EgressBytes
-		e.download += rec.IngressBytes
+	e.upload += rec.IngressBytes
+	e.download += rec.EgressBytes
 		e.total += rec.TotalBytes
 	}
 
@@ -1054,8 +1054,8 @@ func (s *Server) fetchTrafficForWindow(mac, window, iface string) (trafficWindow
 	var stats trafficWindowStats
 	for _, rec := range apiResp.Records {
 		if rec.MAC == mac {
-			stats.Upload += rec.EgressBytes
-			stats.Download += rec.IngressBytes
+			stats.Upload += rec.IngressBytes
+			stats.Download += rec.EgressBytes
 			stats.Total += rec.TotalBytes
 		}
 	}
