@@ -52,21 +52,17 @@ func run() error {
 	}
 	log.Printf("State loaded: %d devices", len(state.Devices))
 
-	// Init nftables
-	nft, err := NewNFTManager(cfg)
-	if err != nil {
+	// Init nftables and bring the wlt table (including set elements from
+	// state) into the desired shape before serving.
+	nft := NewNFTManager(cfg, DesiredFromState(cfg, state))
+	if res, err := nft.Sync(); err != nil {
 		return fmt.Errorf("init nftables: %w", err)
+	} else if len(res.MissingIfaces) > 0 {
+		log.Printf("warn: LAN interface(s) not present yet, will attach when they appear: %v", res.MissingIfaces)
 	}
-	log.Printf("NFTManager initialized")
+	log.Printf("nftables table %q synced", cfg.TableName)
 
-	// Rebuild sets from persisted state
-	if err := nft.RebuildFromState(state); err != nil {
-		log.Printf("warn: rebuild from state: %v", err)
-	} else {
-		log.Printf("NFT sets rebuilt from state")
-	}
-
-	reconciler := DefaultReconciler(cfg)
+	reconciler := NewReconciler(cfg, nft)
 	reconcileCtx, reconcileCancel := context.WithCancel(context.Background())
 	reconcileStopped := make(chan struct{})
 	go func() {
@@ -111,8 +107,7 @@ func run() error {
 	select {
 	case <-reconcileStopped:
 	case <-time.After(5 * time.Second):
-		log.Printf("Warning: reconciler did not shutdown gracefully, forcing stop")
-		reconciler.Stop()
+		log.Printf("Warning: reconciler did not shut down within 5s")
 	}
 
 	// Graceful shutdown
@@ -124,11 +119,11 @@ func run() error {
 	}
 
 	if cfg.CleanupOnExit {
-		log.Printf("Cleaning up nft sets...")
+		log.Printf("Cleaning up nftables...")
 		if err := nft.Cleanup(); err != nil {
 			log.Printf("warn: nft cleanup: %v", err)
 		} else {
-			log.Printf("NFT sets flushed")
+			log.Printf("nftables cleaned up")
 		}
 	}
 

@@ -33,10 +33,24 @@ table netdev wlt {
 
 ### Reconciliation Flow
 
-1. `nft monitor json` runs as subprocess watching for changes
-2. On detected events (add/delete table/chain/set/rule), triggers `Reconcile()`
-3. `Reconcile()` ensures table, chains, sets, and rules exist (creates if missing)
-4. Periodic fallback every 5 minutes for edge cases
+`NFTManager.Sync()` (nft.go) is the single source of truth: it compares the
+kernel with config + `state.json` (table, one ingress chain per existing LAN
+interface, one MAC set per policy **including its elements**, one rule per
+policy tagged `wlt:v2:<policy>:<mark>`) and applies only the difference in one
+atomic batch. With no drift it sends nothing.
+
+`Reconciler` (reconcile.go) calls `Sync()`:
+
+1. on nftables netlink notifications (google/nftables `AddGenerationalMonitor`,
+   no `nft` binary) that touch the wlt table, delete a table, or change set
+   elements — this covers `nft flush ruleset` + `nft -f nftables.conf`;
+2. on RTM_NEWLINK/DELLINK for a LAN interface (netdev chains die with their device);
+3. every minute as a fallback, and after a monitor re-subscribe.
+
+Triggers are debounced (300 ms). Policy changes write `state` first, then call
+`SetDevicePolicy`, so a concurrent `Sync` never reverts them.
+
+Kernel tests (root, own netns): `go test -c -o /tmp/wlt.test . && sudo unshare -n env WLT_NFT_KERNEL_TEST=1 /tmp/wlt.test -test.run Kernel -test.v`
 
 ## Common Tasks
 
@@ -114,14 +128,8 @@ sudo nft monitor json
 
 ## Common Issues
 
-### nftables watcher not detecting external clears
+### Table not rebuilt after `nft flush ruleset` (pre-v0.6.0)
 
-Fixed in v0.5.0: The reconciler now uses `nft monitor` for event-driven detection instead of polling.
-
-### Chain snapshot staleness (pre-v0.5.0 bug)
-
-When reconciler created new chains, the subsequent rule-check loop used a stale chain list snapshot. Fixed by re-fetching chains after flush.
-
-### Table re-fetch condition was broken (pre-v0.5.0)
-
-Condition `t == nil` inside a `for _, t := range tables` loop was never true. Fixed by properly re-listing tables.
+The old watcher matched text such as "add table" against `nft monitor json`
+output, which never contains it, and the rebuild never restored set elements.
+Replaced by the netlink monitor + `Sync()` described above.

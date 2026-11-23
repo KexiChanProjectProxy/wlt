@@ -100,6 +100,12 @@ func (s *State) Set(dev *DeviceState) {
 	s.Devices[dev.MAC] = dev
 }
 
+func (s *State) Delete(mac string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.Devices, mac)
+}
+
 func (s *State) All() []*DeviceState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
