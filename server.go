@@ -52,12 +52,14 @@ func NewServer(cfg *Config, state *State, nft devicePolicySetter) *Server {
 	mux.HandleFunc("/api/policies", s.handlePolicies)
 	mux.HandleFunc("/api/policy", s.handleSetPolicy)
 	mux.HandleFunc("/api/traffic", s.handleTraffic)
+	mux.HandleFunc("/api/live", s.handleLive)
 	if cfg.AdminPSK != "" {
 		mux.Handle("/api/admin/device", s.adminOnly(http.HandlerFunc(s.handleAdminDevice)))
 		mux.Handle("/api/admin/policy", s.adminOnly(http.HandlerFunc(s.handleAdminSetPolicy)))
 		mux.Handle("/api/admin/traffic", s.adminOnly(http.HandlerFunc(s.handleAdminTraffic)))
 		mux.Handle("/api/admin/topk-traffic", s.adminOnly(http.HandlerFunc(s.handleAdminTopKTraffic)))
 		mux.Handle("/api/admin/devices", s.adminOnly(http.HandlerFunc(s.handleAdminDevices)))
+		mux.Handle("/api/admin/live", s.adminOnly(http.HandlerFunc(s.handleAdminLive)))
 	}
 	s.handler = mux
 	return s

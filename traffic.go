@@ -188,21 +188,76 @@ type apiRecord struct {
 	TotalBytes    uint64 `json:"total_bytes"`
 }
 
-func (s *Server) fetchLive(ctx context.Context) map[string]liveRate {
-	var live struct {
-		Devices []struct {
-			MAC         string `json:"mac"`
-			UploadBps   uint64 `json:"upload_bps"`
-			DownloadBps uint64 `json:"download_bps"`
-		} `json:"devices"`
+type apiLive struct {
+	IntervalSeconds float64 `json:"interval_seconds"`
+	Devices         []struct {
+		MAC         string `json:"mac"`
+		UploadBps   uint64 `json:"upload_bps"`
+		DownloadBps uint64 `json:"download_bps"`
+	} `json:"devices"`
+}
+
+func (s *Server) fetchLiveRaw(ctx context.Context, mac string) (apiLive, map[string]liveRate, error) {
+	var live apiLive
+	var q url.Values
+	if mac != "" {
+		q = url.Values{"mac": {mac}}
 	}
 	out := map[string]liveRate{}
-	if err := s.trafficGet(ctx, "/api/v1/live", nil, &live); err == nil {
-		for _, d := range live.Devices {
-			out[d.MAC] = liveRate{d.UploadBps, d.DownloadBps}
-		}
+	if err := s.trafficGet(ctx, "/api/v1/live", q, &live); err != nil {
+		return live, out, err
 	}
+	for _, d := range live.Devices {
+		out[d.MAC] = liveRate{d.UploadBps, d.DownloadBps}
+	}
+	return live, out, nil
+}
+
+func (s *Server) fetchLive(ctx context.Context) map[string]liveRate {
+	_, out, _ := s.fetchLiveRaw(ctx, "")
 	return out
+}
+
+type liveResponse struct {
+	Available       bool    `json:"available"`
+	IntervalSeconds float64 `json:"interval_seconds"`
+	UploadBps       uint64  `json:"upload_bps"`
+	DownloadBps     uint64  `json:"download_bps"`
+}
+
+// GET /api/live: the requesting device's current rate (polled every second).
+func (s *Server) handleLive(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	target, err := s.resolveGetTarget(r)
+	if err != nil || target == nil || target.mac == nil {
+		writeJSON(w, http.StatusOK, liveResponse{})
+		return
+	}
+	mac := target.mac.String()
+	live, rates, err := s.fetchLiveRaw(r.Context(), mac)
+	if err != nil {
+		writeJSON(w, http.StatusOK, liveResponse{})
+		return
+	}
+	rt := rates[mac]
+	writeJSON(w, http.StatusOK, liveResponse{Available: true, IntervalSeconds: live.IntervalSeconds, UploadBps: rt.UploadBps, DownloadBps: rt.DownloadBps})
+}
+
+// GET /api/admin/live: current rate of every active device, keyed by MAC.
+func (s *Server) handleAdminLive(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	live, rates, err := s.fetchLiveRaw(r.Context(), "")
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"interval_seconds": live.IntervalSeconds, "devices": rates})
 }
 
 func primaryIP(dev *DeviceState) string {
