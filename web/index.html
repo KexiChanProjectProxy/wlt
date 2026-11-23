@@ -276,6 +276,8 @@ button:focus-visible, select:focus-visible, .input:focus-visible, input[type=che
 .dev .ip { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dev .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; display: flex; flex-wrap: wrap; align-items: center; column-gap: 6px; }
 .dev .meta .copyable { font-family: var(--mono); }
+.lv:empty { display: none; }
+.lv, .speed .v { font-variant-numeric: tabular-nums; }
 .dev select { font-size: 14px; max-width: 150px; min-height: 38px; padding: 0 8px; }
 .dev .usage { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; flex-wrap: wrap; }
 .dev .usage .bar { flex: 1 1 80px; }
@@ -587,11 +589,12 @@ function trafficBody(tr, key, compact) {
   if (!tr.available) return `<div class="empty">${esc(t('trafficDown'))}</div>`;
   const tile = (k, w, extra) => `<div class="tile nest"><div class="k">${esc(t(k))}</div><div class="v">${bytes(w.total)}</div>` +
     `<div class="ud"><span>↓ ${bytes(w.download)}</span><span>↑ ${bytes(w.upload)}</span></div>${extra || ''}</div>`;
+  const lv = (key === 'self' && S.selfLive) || tr.live || {};
   const prev = tr.last_month && tr.last_month.total ? `<div class="prev">${esc(t('prevMonth', { v: bytes(tr.last_month.total) }))}</div>` : '';
   return (compact ? '' :
     `<div class="live">
-       <div class="speed nest"><div class="k"><i class="dot down" aria-hidden="true"></i>${esc(t('download'))} · ${esc(t('now'))}</div><div class="v">${rate(tr.live.download_bps)}</div></div>
-       <div class="speed nest"><div class="k"><i class="dot up" aria-hidden="true"></i>${esc(t('upload'))} · ${esc(t('now'))}</div><div class="v">${rate(tr.live.upload_bps)}</div></div>
+       <div class="speed nest"><div class="k"><i class="dot down" aria-hidden="true"></i>${esc(t('download'))} · ${esc(t('now'))}</div><div class="v" data-live="down">${rate(lv.download_bps)}</div></div>
+       <div class="speed nest"><div class="k"><i class="dot up" aria-hidden="true"></i>${esc(t('upload'))} · ${esc(t('now'))}</div><div class="v" data-live="up">${rate(lv.upload_bps)}</div></div>
      </div>`) +
     `<div class="tiles">${tile('today', tr.today)}${tile('yesterday', tr.yesterday)}${tile('week', tr.week)}${tile('month', tr.month, prev)}</div>` +
     chartBlock(key, tr.series);
@@ -658,7 +661,7 @@ function deviceRow(d, u, max, rank, trafficOn) {
   const open = S.admin.expanded === d.mac;
   const me = S.device && S.device.mac === d.mac;
   const ips = [...(d.ipv4s || []), ...(d.ipv6s || [])].filter(x => x && x !== d.ip);
-  const live = (u.downBps || u.upBps) ? `<span>↓ ${rate(u.downBps)} ↑ ${rate(u.upBps)}</span>` : '';
+  const live = `<span class="lv" data-live-mac="${esc(d.mac)}">${liveText(d.mac, u.upBps, u.downBps)}</span>`;
   const seen = d.last_seen !== undefined ? `<span>${esc(t('lastSeen'))} ${esc(ago(d.last_seen))}</span>` : '';
   return `<div class="dev${open ? ' open' : ''}">
     <div class="who"><div class="ipline">${d.ip ? copyVal(d.ip, 'ip') : copyVal(d.mac, 'ip')}${me ? `<span class="me-tag">${esc(t('me'))}</span>` : ''}</div>
@@ -668,6 +671,14 @@ function deviceRow(d, u, max, rank, trafficOn) {
       <span>${u.label}</span>` : ''}${trafficOn && d.ip ? `<button type="button" class="link" data-act="expand" data-mac="${esc(d.mac)}" data-ip="${esc(d.ip)}" aria-expanded="${open}" aria-label="${esc(t('detailsOf', { d: d.ip }))}">${esc(open ? t('hide') : t('details'))}</button>` : ''}</div>
     ${open ? `<div class="detail">${ips.length ? `<div class="ips">${ips.map(ip => `<span class="chip">${copyVal(ip)}</span>`).join('')}</div>` : ''}${trafficBody(S.admin.detail[d.mac], d.mac, true)}</div>` : ''}
   </div>`;
+}
+
+// Live rates come from /api/admin/live every second; fall back to the rates
+// that arrived with the device list until the first poll.
+function liveText(mac, up, down) {
+  const l = S.admin.live && S.admin.live[mac];
+  if (S.admin.live) { up = l ? l.upload_bps : 0; down = l ? l.download_bps : 0; }
+  return (up || down) ? `↓ ${rate(down)} ↑ ${rate(up)}` : '';
 }
 
 function adminDevices() {
@@ -848,7 +859,7 @@ async function loadDetail(mac, ip) {
 }
 
 function adminFail(silent) {
-  Object.assign(S.admin, { open: false, unlocking: false, psk: '', devices: null, rank: null, pinned: {} });
+  Object.assign(S.admin, { open: false, unlocking: false, psk: '', devices: null, rank: null, pinned: {}, live: null });
   store('wlt-psk');
   if (!silent) toast(t('badPsk'), true);
   renderAll();
@@ -935,7 +946,7 @@ document.addEventListener('click', async e => {
   else if (a === 'retry') loadSelf();
   else if (a === 'self-policy') setSelfPolicy(el.dataset.p);
   else if (a === 'tab') selectTab(el.dataset.tab, false);
-  else if (a === 'lock') { Object.assign(S.admin, { open: false, psk: '', devices: null, rank: null, pinned: {} }); store('wlt-psk'); renderAll(); }
+  else if (a === 'lock') { Object.assign(S.admin, { open: false, psk: '', devices: null, rank: null, pinned: {}, live: null }); store('wlt-psk'); renderAll(); }
   else if (a === 'lookup') lookupIP(el.dataset.ip);
   else if (a === 'pick') pickBar(el);
   else if (a === 'clear-search') { S.admin.q = ''; const s = document.querySelector('[data-act=search]'); if (s) { s.value = ''; s.focus(); } el.hidden = true; renderAdminList(); }
@@ -1037,6 +1048,32 @@ function tick() {
   }
 }
 setInterval(tick, 10000);
+
+// Live rates: once a second, updating only the numbers in place.
+let liveBusy = false;
+async function liveTick() {
+  if (document.hidden || liveBusy || !S.features.traffic_enabled) return;
+  liveBusy = true;
+  try {
+    const jobs = [];
+    if (known()) jobs.push(api('/api/live').then(r => {
+      if (!r.available) return;
+      S.selfLive = { upload_bps: r.upload_bps, download_bps: r.download_bps };
+      const d = document.querySelector('#traffic [data-live="down"]'), u = document.querySelector('#traffic [data-live="up"]');
+      if (d) d.textContent = rate(r.download_bps);
+      if (u) u.textContent = rate(r.upload_bps);
+    }).catch(() => {}));
+    if (S.admin.open) jobs.push(adminApi('/api/admin/live').then(r => {
+      S.admin.live = r.devices || {};
+      document.querySelectorAll('#admin-list [data-live-mac]').forEach(el => {
+        const txt = liveText(el.dataset.liveMac, 0, 0);
+        if (el.textContent !== txt) el.textContent = txt;
+      });
+    }).catch(e => { if (e.status === 401) adminFail(); }));
+    await Promise.all(jobs);
+  } finally { liveBusy = false; }
+}
+setInterval(liveTick, 1000);
 setInterval(() => { if (!document.hidden) refreshDevice(); }, 60000);
 
 (function init() {
