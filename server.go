@@ -57,6 +57,7 @@ func NewServer(cfg *Config, state *State, nft devicePolicySetter) *Server {
 		mux.Handle("/api/admin/policy", s.adminOnly(http.HandlerFunc(s.handleAdminSetPolicy)))
 		mux.Handle("/api/admin/traffic", s.adminOnly(http.HandlerFunc(s.handleAdminTraffic)))
 		mux.Handle("/api/admin/topk-traffic", s.adminOnly(http.HandlerFunc(s.handleAdminTopKTraffic)))
+		mux.Handle("/api/admin/devices", s.adminOnly(http.HandlerFunc(s.handleAdminDevices)))
 	}
 	s.handler = mux
 	return s
@@ -84,7 +85,8 @@ type deviceResponse struct {
 }
 
 type featuresResponse struct {
-	AdminEnabled bool `json:"admin_enabled"`
+	AdminEnabled   bool `json:"admin_enabled"`
+	TrafficEnabled bool `json:"traffic_enabled"`
 }
 
 func (s *Server) detectDevice(r *http.Request) (*DeviceState, error) {
@@ -428,8 +430,12 @@ func (s *Server) handleDevice(w http.ResponseWriter, r *http.Request) {
 		s.state.Set(dev)
 		// Apply nft rules for default policy
 		if err := s.nft.SetDevicePolicy(target.mac, "", dev.Policy); err != nil {
-			// Log but continue
+			// Log but continue; the reconciler retries from state.
 			fmt.Printf("warn: nft SetDevicePolicy for new device %s: %v\n", dev.MAC, err)
+		}
+		// Persist, or the device loses its mark after a restart.
+		if err := s.state.Save(s.cfg.StatePath); err != nil {
+			fmt.Printf("warn: save state: %v\n", err)
 		}
 	}
 
@@ -486,54 +492,6 @@ func (s *Server) handleAdminDevice(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
-func (s *Server) handleAdminTraffic(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-	if err := requireIPSelector(r.URL.Query().Get("mac"), r.URL.Query().Get("ip")); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	target, err := s.parseSelector("", r.URL.Query().Get("ip"))
-	if err != nil {
-		if target != nil && target.sourceIP != nil && target.mac == nil {
-			writeError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if target == nil || target.mac == nil {
-		writeError(w, http.StatusNotFound, errString(err, "device not found"))
-		return
-	}
-
-	iface := r.URL.Query().Get("iface")
-
-	result := trafficResponse{}
-	for _, win := range []string{"today", "7days", "month"} {
-		stats, err := s.fetchTrafficForWindow(target.mac.String(), win, iface)
-		if err != nil {
-			continue
-		}
-		switch win {
-		case "today":
-			result.Today = stats
-		case "7days":
-			result.Week = stats
-		case "month":
-			result.Month = stats
-		}
-	}
-
-	writeJSON(w, http.StatusOK, result)
-}
-
 type policyResponse struct {
 	Name        string `json:"name"`
 	Mark        uint32 `json:"mark"`
@@ -559,7 +517,7 @@ func (s *Server) handleFeatures(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, featuresResponse{AdminEnabled: s.cfg.AdminPSK != ""})
+	writeJSON(w, http.StatusOK, featuresResponse{AdminEnabled: s.cfg.AdminPSK != "", TrafficEnabled: s.cfg.TrafficAPIURL != ""})
 }
 
 type setPolicyRequest struct {
@@ -627,14 +585,19 @@ func (s *Server) handleSetPolicy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dev := s.buildDeviceState(target.mac, target.sourceIP)
-
+	prev := s.state.Get(dev.MAC)
 	oldPolicy := ""
-	if existing := s.state.Get(dev.MAC); existing != nil {
-		oldPolicy = existing.Policy
+	if prev != nil {
+		oldPolicy = prev.Policy
+	}
+	dev.Policy = req.Policy
+	if !target.explicit {
+		dev.LastSeen = time.Now()
 	}
 
-	// Move MAC between nft sets
-	if err := s.nft.SetDevicePolicy(target.mac, oldPolicy, req.Policy); err != nil {
+	// Record the new policy before touching nftables, so a concurrent
+	// reconcile (which rebuilds the sets from state) agrees with this change.
+	if err := s.applyPolicy(dev, prev, target.mac, oldPolicy); err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("nft error: %v", err))
 		return
 	}
@@ -646,16 +609,6 @@ func (s *Server) handleSetPolicy(w http.ResponseWriter, r *http.Request) {
 		} else if n > 0 {
 			fmt.Printf("info: flushed %d conntrack entries for %s\n", n, dev.MAC)
 		}
-	}
-
-	dev.Policy = req.Policy
-	if !target.explicit {
-		dev.LastSeen = time.Now()
-	}
-	s.state.Set(dev)
-
-	if err := s.state.Save(s.cfg.StatePath); err != nil {
-		fmt.Printf("warn: save state: %v\n", err)
 	}
 
 	resp := deviceResponse{
@@ -715,12 +668,13 @@ func (s *Server) handleAdminSetPolicy(w http.ResponseWriter, r *http.Request) {
 		dev.LastSeen = time.Time{}
 	}
 
+	prev := s.state.Get(dev.MAC)
 	oldPolicy := ""
-	if existing := s.state.Get(dev.MAC); existing != nil {
-		oldPolicy = existing.Policy
+	if prev != nil {
+		oldPolicy = prev.Policy
 	}
-
-	if err := s.nft.SetDevicePolicy(target.mac, oldPolicy, req.Policy); err != nil {
+	dev.Policy = req.Policy
+	if err := s.applyPolicy(dev, prev, target.mac, oldPolicy); err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("nft error: %v", err))
 		return
 	}
@@ -732,13 +686,6 @@ func (s *Server) handleAdminSetPolicy(w http.ResponseWriter, r *http.Request) {
 		} else if n > 0 {
 			fmt.Printf("info: flushed %d conntrack entries for %s\n", n, dev.MAC)
 		}
-	}
-
-	dev.Policy = req.Policy
-	s.state.Set(dev)
-
-	if err := s.state.Save(s.cfg.StatePath); err != nil {
-		fmt.Printf("warn: save state: %v\n", err)
 	}
 
 	resp := deviceResponse{
@@ -760,305 +707,20 @@ func errString(err error, fallback string) string {
 	return fallback
 }
 
-type trafficRecord struct {
-	Interface      string `json:"interface"`
-	Ifindex        int    `json:"ifindex"`
-	MAC            string `json:"mac"`
-	IngressBytes   uint64 `json:"ingress_bytes"`
-	EgressBytes    uint64 `json:"egress_bytes"`
-	TotalBytes     uint64 `json:"total_bytes"`
-	IngressPackets uint64 `json:"ingress_packets"`
-	EgressPackets  uint64 `json:"egress_packets"`
-	TotalPackets   uint64 `json:"total_packets"`
-	Window         string `json:"window"`
-}
-
-type trafficWindowStats struct {
-	Upload   uint64 `json:"upload"`
-	Download uint64 `json:"download"`
-	Total    uint64 `json:"total"`
-}
-
-type trafficResponse struct {
-	Today trafficWindowStats `json:"today"`
-	Week  trafficWindowStats `json:"week"`
-	Month trafficWindowStats `json:"month"`
-}
-
-func (s *Server) handleTraffic(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-
-	window := r.URL.Query().Get("window")
-	iface := r.URL.Query().Get("iface")
-
-	_ = window // window param is available for future use
-
-	target, err := s.resolveGetTarget(r)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	if target.mac == nil {
-		writeJSON(w, http.StatusOK, trafficResponse{
-			Today: trafficWindowStats{},
-			Week:  trafficWindowStats{},
-			Month: trafficWindowStats{},
-		})
-		return
-	}
-
-	macStr := target.mac.String()
-
-	if s.trafficAPIURL == "" {
-		writeJSON(w, http.StatusOK, trafficResponse{
-			Today: trafficWindowStats{},
-			Week:  trafficWindowStats{},
-			Month: trafficWindowStats{},
-		})
-		return
-	}
-
-	windows := []string{"today", "7days", "month"}
-
-	result := trafficResponse{}
-	for _, win := range windows {
-		stats, err := s.fetchTrafficForWindow(macStr, win, iface)
-		if err != nil {
-			// Keep zeros on error (graceful degradation)
-			continue
-		}
-		switch win {
-		case "today":
-			result.Today = stats
-		case "7days":
-			result.Week = stats
-		case "month":
-			result.Month = stats
-		}
-	}
-
-	writeJSON(w, http.StatusOK, result)
-}
-
-func (s *Server) handleAdminTopKTraffic(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-
-	k := 10
-	if kStr := r.URL.Query().Get("k"); kStr != "" {
-		if parsed, err := parseTrafficAPIVersion(kStr); err == nil && parsed > 0 && parsed <= 100 {
-			k = parsed
-		}
-	}
-	window := r.URL.Query().Get("window")
-	if window == "" {
-		window = "today"
-	}
-	validWindows := map[string]bool{"today": true, "7days": true, "month": true}
-	if !validWindows[window] {
-		writeError(w, http.StatusBadRequest, "invalid window")
-		return
-	}
-	iface := r.URL.Query().Get("iface")
-
-	if s.trafficAPIURL == "" {
-		writeJSON(w, http.StatusOK, []topKEntry{})
-		return
-	}
-
-	url := fmt.Sprintf("%s/api/v1/traffic?window=%s&limit=100", s.trafficAPIURL, window)
-	if iface != "" {
-		url += "&iface=" + iface
-	}
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	resp, err := s.trafficHTTPClient.Do(req)
-	if err != nil {
-		writeJSON(w, http.StatusOK, []topKEntry{})
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		writeJSON(w, http.StatusOK, []topKEntry{})
-		return
-	}
-
-	var apiResp struct {
-		Records []trafficRecord `json:"records"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
-		writeJSON(w, http.StatusOK, []topKEntry{})
-		return
-	}
-
-	type agg struct {
-		mac       string
-		upload    uint64
-		download  uint64
-		total     uint64
-		primaryIP string
-		policy    string
-	}
-	aggMap := make(map[string]*agg)
-
-	for _, rec := range apiResp.Records {
-		if rec.MAC == "" {
-			continue
-		}
-		if isBroadcastMAC(rec.MAC) {
-			continue
-		}
-
-		e, ok := aggMap[rec.MAC]
-		if !ok {
-			e = &agg{mac: rec.MAC}
-			aggMap[rec.MAC] = e
-		}
-	e.upload += rec.IngressBytes
-	e.download += rec.EgressBytes
-		e.total += rec.TotalBytes
-	}
-
-	if len(aggMap) == 0 {
-		writeJSON(w, http.StatusOK, []topKEntry{})
-		return
-	}
-
-	devices := s.state.All()
-	macToDev := make(map[string]*DeviceState)
-	for _, dev := range devices {
-		macToDev[dev.MAC] = dev
-	}
-
-	entries := make([]topKEntry, 0, len(aggMap))
-	for mac, e := range aggMap {
-		var ip string
-		var policy string
-		if dev, ok := macToDev[mac]; ok && dev != nil {
-			policy = dev.Policy
-			for _, candidate := range dev.IPv4s {
-				if candidate != "" {
-					ip = candidate
-					break
-				}
-			}
-			if ip == "" {
-				for _, candidate := range dev.IPv6s {
-					if candidate != "" {
-						ip = candidate
-						break
-					}
-				}
-			}
-		}
-		entries = append(entries, topKEntry{
-			IP:       ip,
-			MAC:      mac,
-			Upload:   e.upload,
-			Download: e.download,
-			Total:    e.total,
-			Policy:   policy,
-		})
-	}
-
-	sortTopK(entries)
-
-	if len(entries) > k {
-		entries = entries[:k]
-	}
-
-	writeJSON(w, http.StatusOK, entries)
-}
-
-func isBroadcastMAC(mac string) bool {
-	lower := ""
-	for _, c := range mac {
-		if c >= 'A' && c <= 'Z' {
-			lower += string(c + 'a' - 'A')
+// applyPolicy stores dev (with its new policy) in state, moves the MAC between
+// nft sets and saves state. If nftables refuses, state is restored to prev.
+func (s *Server) applyPolicy(dev, prev *DeviceState, mac net.HardwareAddr, oldPolicy string) error {
+	s.state.Set(dev)
+	if err := s.nft.SetDevicePolicy(mac, oldPolicy, dev.Policy); err != nil {
+		if prev != nil {
+			s.state.Set(prev)
 		} else {
-			lower += string(c)
+			s.state.Delete(dev.MAC)
 		}
+		return err
 	}
-	return lower == "ff:ff:ff:ff:ff:ff" || lower == "00:00:00:00:00:00"
-}
-
-func parseTrafficAPIVersion(s string) (int, error) {
-	var v int
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return 0, fmt.Errorf("invalid")
-		}
-		v = v*10 + int(c-'0')
+	if err := s.state.Save(s.cfg.StatePath); err != nil {
+		fmt.Printf("warn: save state: %v\n", err)
 	}
-	return v, nil
-}
-
-func sortTopK(entries []topKEntry) {
-	for i := 0; i < len(entries); i++ {
-		for j := i + 1; j < len(entries); j++ {
-			if entries[j].Total > entries[i].Total {
-				entries[i], entries[j] = entries[j], entries[i]
-			}
-		}
-	}
-}
-
-type topKEntry struct {
-	IP       string `json:"ip"`
-	MAC      string `json:"mac"`
-	Upload   uint64 `json:"upload"`
-	Download uint64 `json:"download"`
-	Total    uint64 `json:"total"`
-	Policy   string `json:"policy"`
-}
-
-func (s *Server) fetchTrafficForWindow(mac, window, iface string) (trafficWindowStats, error) {
-	url := fmt.Sprintf("%s/api/v1/traffic?window=%s&mac=%s&limit=100", s.trafficAPIURL, window, mac)
-	if iface != "" {
-		url += "&iface=" + iface
-	}
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return trafficWindowStats{}, err
-	}
-
-	resp, err := s.trafficHTTPClient.Do(req)
-	if err != nil {
-		return trafficWindowStats{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return trafficWindowStats{}, fmt.Errorf("traffic API returned status %d", resp.StatusCode)
-	}
-
-	var apiResp struct {
-		Records []trafficRecord `json:"records"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
-		return trafficWindowStats{}, err
-	}
-
-	var stats trafficWindowStats
-	for _, rec := range apiResp.Records {
-		if rec.MAC == mac {
-			stats.Upload += rec.IngressBytes
-			stats.Download += rec.EgressBytes
-			stats.Total += rec.TotalBytes
-		}
-	}
-
-	return stats, nil
+	return nil
 }

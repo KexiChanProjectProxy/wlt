@@ -1,1557 +1,724 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title id="pageTitle">WLT - Traffic Policy</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>网络通</title>
 <style>
+:root {
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --surface-2: #eef2f7;
+  --border: #e1e6ee;
+  --text: #172033;
+  --text-2: #3f4b5e;
+  --muted: #596577;
+  --accent: #2563eb;
+  --accent-soft: #e8f0fe;
+  --accent-ink: #1d4fd7;
+  --on-accent: #ffffff;
+  --up: #d97706;
+  --down: #2563eb;
+  --err: #b91c1c;
+  --err-soft: #fdecec;
+  --warn: #92400e;
+  --warn-soft: #fef3c7;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 4px 16px rgba(16, 24, 40, .06);
+  --radius: 14px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+:lang(ja) { --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans CJK JP", Roboto, sans-serif; }
+@media (prefers-color-scheme: dark) {
   :root {
-    /* Modern Soft Card Theme */
-    /* Purple/Violet Accent Colors */
-    --primary-purple: #8b5cf6;      /* Medium purple */
-    --primary-purple-light: #a78bfa;  /* Light purple */
-    --primary-purple-dark: #7c3aed;   /* Dark purple */
-    --accent-violet: #6366f1;       /* Violet for admin */
-    --success-violet: #10b981;      /* Emerald green for success */
-    --error-violet: #ef4444;        /* Red for errors */
-    --warning-violet: #f59e0b;      /* Amber for warnings */
-    --info-violet: #3b82f6;         /* Blue for info */
-    
-    /* Light Base Colors */
-    --bg: #f8fafc;                 /* Very light gray */
-    --surface: #ffffff;            /* Pure white */
-    --surface-elevated: #f1f5f9;  /* Light elevated surface */
-    --border: #e2e8f0;             /* Light border */
-    --border-light: #cbd5e1;       /* Lighter border */
-    --border-focus: #8b5cf6;       /* Purple focus border */
-    
-    /* Shadows and Depths */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    
-    /* Typography */
-    --heading-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    --body-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    
-    /* Text Colors */
-    --text-primary: #1e293b;      /* Dark gray */
-    --text-secondary: #475569;    /* Medium gray */
-    --text-muted: #64748b;        /* Muted gray */
-    --text-light: #94a3b8;        /* Light gray */
-    
-    /* Spacing Scale (8px base) */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-2xl: 48px;
-    
-    /* Border Radius */
-    --radius-sm: 6px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --radius-xl: 16px;
-    
-    /* Transitions */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    
-    /* Admin theme */
-    --admin-border: #e2e8f0;
-    --admin-surface: #ffffff;
-    --admin-bg: #f8fafc;
-    
-    /* Status Colors */
-    --ok-bg: rgba(16, 185, 129, 0.1);
-    --ok-text: #10b981;
-    --ok-border: rgba(16, 185, 129, 0.3);
-    --err-bg: rgba(239, 68, 68, 0.1);
-    --err-text: #ef4444;
-    --err-border: rgba(239, 68, 68, 0.3);
-    --info-bg: rgba(59, 130, 246, 0.1);
-    --info-text: #3b82f6;
-    --info-border: rgba(59, 130, 246, 0.3);
-    
-    /* Glow effects */
-    --glow-primary: 0 0 12px rgba(139, 92, 246, 0.15), 0 0 24px rgba(139, 92, 246, 0.08);
-    --glow-accent: 0 0 12px rgba(99, 102, 241, 0.15), 0 0 24px rgba(99, 102, 241, 0.08);
-    --glow-success: 0 0 12px rgba(16, 185, 129, 0.15), 0 0 24px rgba(16, 185, 129, 0.08);
-    --glow-error: 0 0 12px rgba(239, 68, 68, 0.15), 0 0 24px rgba(239, 68, 68, 0.08);
+    --bg: #0f141c;
+    --surface: #171e29;
+    --surface-2: #1f2835;
+    --border: #2c3647;
+    --text: #e8edf5;
+    --text-2: #c2ccda;
+    --muted: #97a4b8;
+    --accent: #3b76f6;
+    --accent-soft: #1d2b45;
+    --accent-ink: #8db2fa;
+    --on-accent: #ffffff;
+    --up: #fbbf24;
+    --down: #6b9bf5;
+    --err: #fca5a5;
+    --err-soft: #3b1d1d;
+    --warn: #fcd34d;
+    --warn-soft: #3a2e12;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3);
   }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.5 var(--font);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+button, input, select { font: inherit; color: inherit; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 16px 16px 48px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 16px; }
+h1.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; letter-spacing: .2px; margin: 0; }
+.logo { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); display: grid; place-items: center; }
+.logo svg { width: 18px; height: 18px; }
+.lang { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 2px; }
+.lang button { border: 0; background: none; min-width: 40px; min-height: 34px; padding: 0 10px; border-radius: 999px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.lang button.on { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 
-  * { 
-    box-sizing: border-box; 
-    margin: 0; 
-    padding: 0; 
-  }
-  
-  html {
-    font-size: 14px;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-  
-  body {
-    font-family: var(--body-font);
-    background: var(--bg);
-    color: var(--text-primary);
-    line-height: 1.5;
-    min-height: 100vh;
-    padding: var(--space-md);
-    font-feature-settings: "kern" 1;
-    font-variant-ligatures: common-ligatures;
-  }
-  
-  h1 {
-    font-family: var(--heading-font);
-    text-align: center;
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: var(--space-lg);
-    color: var(--text-primary);
-    letter-spacing: -0.025em;
-    background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-purple-dark) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px; }
+.card h2 { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .4px; margin: 0 0 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.sub { color: var(--muted); font-size: 13px; }
+.mono { font-family: var(--mono); font-size: 13px; }
 
-  .card {
-    background: var(--surface);
-    border-radius: var(--radius-xl);
-    padding: var(--space-lg);
-    margin-bottom: var(--space-md);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-md);
-    transition: all var(--transition-normal);
-    position: relative;
-  }
-  
-  .card:hover {
-    border-color: var(--primary-purple);
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-2px);
-  }
-  
-  .admin-card {
-    border: 1px solid var(--border);
-    background: var(--surface);
-    box-shadow: var(--shadow-md);
-    border-color: var(--accent-violet);
-  }
+.ident { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--text-2); font-size: 13px; margin-bottom: 14px; }
+.ident b { color: var(--text); font-weight: 600; }
 
-  .card-tag {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    padding: 6px 12px;
-    margin-bottom: var(--space-sm);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    font-family: var(--heading-font);
-    background: var(--surface-elevated);
-    color: var(--primary-purple);
-    border: 1px solid var(--primary-purple);
-  }
-  
-  .card-tag.self {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%);
-    color: var(--primary-purple);
-    border: 1px solid var(--primary-purple);
-  }
-  
-  .card-tag.admin {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(129, 140, 248, 0.1) 100%);
-    color: var(--accent-violet);
-    border: 1px solid var(--accent-violet);
-  }
+.policies { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.pol { position: relative; text-align: left; border: 1.5px solid var(--border); background: var(--surface); border-radius: 12px; padding: 12px 40px 12px 14px; cursor: pointer; transition: border-color .15s, background .15s; min-height: 64px; }
+.pol:hover { border-color: var(--accent); }
+.pol .n { font-weight: 600; font-size: 16px; display: block; overflow-wrap: anywhere; }
+.pol .d { color: var(--muted); font-size: 12.5px; display: block; margin-top: 2px; }
+.pol.on { border-color: var(--accent); background: var(--accent-soft); }
+.pol.on::after, .pol.busy::after { content: ""; position: absolute; top: 12px; right: 12px; width: 18px; height: 18px; border-radius: 50%; }
+.pol.on::after { background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/12px no-repeat; }
+.pol.busy::after { border: 2.5px solid var(--accent); border-right-color: transparent; animation: spin .8s linear infinite; }
+.pol[disabled]:not(.busy):not(.on) { opacity: .55; }
+.pol[disabled] { cursor: progress; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.opt { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; color: var(--text-2); font-size: 13px; cursor: pointer; }
+.opt input { margin-top: 3px; width: 16px; height: 16px; }
 
-  .card-title {
-    font-family: var(--heading-font);
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: var(--space-sm);
-    letter-spacing: -0.025em;
-  }
-  
-  .card-copy {
-    font-size: 0.875rem;
-    line-height: 1.6;
-    color: var(--text-secondary);
-    margin-bottom: var(--space-md);
-    font-weight: 400;
-  }
+.live { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-bottom: 14px; }
+.speed { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
+.speed .k { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.speed .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+.dot.up { background: var(--up); } .dot.down { background: var(--down); }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.tile { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.tile .k { font-size: 12px; color: var(--muted); }
+.tile .v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 2px 0; white-space: nowrap; }
+.tile .ud { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; column-gap: 8px; }
+@media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.chart { margin-top: 14px; }
+.chart svg { width: 100%; height: 120px; display: block; }
+.chart rect.hit { cursor: pointer; }
+.axis { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; margin: 2px 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-top: 6px; align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend .pick { color: var(--text); font-variant-numeric: tabular-nums; margin-left: auto; }
+.empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
 
-  .card h2 {
-    font-family: var(--heading-font);
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    margin-bottom: var(--space-md);
-    font-weight: 600;
-  }
+.btn { border: 1px solid var(--border); background: var(--surface); border-radius: 10px; min-height: 40px; padding: 0 14px; cursor: pointer; font-size: 14px; }
+.btn:hover { border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { filter: brightness(1.08); color: var(--on-accent); }
+.btn[disabled] { opacity: .6; cursor: progress; }
+.input { border: 1px solid var(--border); background: var(--surface); border-radius: 10px; min-height: 40px; padding: 0 12px; min-width: 0; }
+button:focus-visible, select:focus-visible, .input:focus, input[type=checkbox]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row .input { flex: 1 1 180px; }
+.tabs { display: flex; gap: 4px; background: var(--surface-2); border-radius: 10px; padding: 3px; }
+.tabs button { border: 0; background: none; border-radius: 8px; min-height: 34px; padding: 0 12px; cursor: pointer; color: var(--muted); font-size: 13px; }
+.tabs button[aria-selected=true] { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
+.list { margin-top: 12px; }
+.dev { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 11px 8px; border-top: 1px solid var(--border); align-items: center; border-radius: 10px; }
+.dev:first-child { border-top-color: transparent; }
+.dev .who { min-width: 0; }
+.dev .ip { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dev .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.dev select { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; min-height: 36px; padding: 0 6px; font-size: 14px; max-width: 150px; }
+.dev .usage { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.dev .usage .bar { flex: 1 1 80px; }
+.bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; display: flex; }
+.bar i { display: block; height: 100%; }
+.bar i.d { background: var(--down); } .bar i.u { background: var(--up); }
+.rank { min-width: 18px; color: var(--muted); font-size: 12px; text-align: right; flex: none; }
+.dev.open { background: var(--surface-2); }
+.dev.me .ip::after { content: attr(data-me); margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--accent-ink); background: var(--accent-soft); border-radius: 6px; padding: 1px 6px; }
+.detail { grid-column: 1 / -1; }
+.link { background: none; border: 0; color: var(--accent-ink); cursor: pointer; min-height: 32px; padding: 0 4px; font-size: 13px; }
+.badge { font-size: 12px; color: var(--muted); }
+.lookup { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 10px 8px; color: var(--text-2); font-size: 13px; }
 
-  .info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-sm) 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.875rem;
-  }
-  
-  .info-row:last-child { 
-    border-bottom: none; 
-  }
-  
-  .info-label { 
-    color: var(--text-muted);
-    font-weight: 500;
-  }
-  
-  .info-value {
-    font-family: var(--heading-font);
-    font-size: 0.8rem;
-    word-break: break-all;
-    text-align: right;
-    max-width: 60%;
-    color: var(--primary-purple);
-    font-weight: 600;
-  }
-
-  .policy-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: var(--space-md);
-  }
-  
-  .policy-card {
-    border: 2px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: var(--space-md);
-    cursor: pointer;
-    transition: all var(--transition-normal);
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    background: var(--surface);
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .policy-card:hover {
-    border-color: var(--primary-purple);
-    background: var(--surface-elevated);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-  }
-  
-  .policy-card.active {
-    border-color: var(--primary-purple);
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(167, 139, 250, 0.05) 100%);
-    box-shadow: var(--glow-primary);
-  }
-  
-  .policy-card.disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-    transform: none;
-  }
-  
-  .policy-card.disabled:hover {
-    border-color: var(--border);
-    background: var(--surface);
-    transform: none;
-    box-shadow: var(--shadow-sm);
-  }
-
-  .policy-dot {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--border);
-    flex-shrink: 0;
-    position: relative;
-    transition: all var(--transition-normal);
-    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.5);
-  }
-  
-  .policy-card:not(.disabled) .policy-dot {
-    background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-purple-light) 100%);
-    box-shadow: var(--glow-primary);
-    animation: pulse 2s infinite;
-  }
-  
-  .policy-card.active .policy-dot {
-    background: linear-gradient(135deg, var(--primary-purple-light) 0%, var(--primary-purple) 100%);
-    box-shadow: var(--glow-primary);
-    animation: pulse 1.5s infinite;
-  }
-  
-  .policy-card.disabled .policy-dot {
-    background: var(--border);
-    opacity: 0.5;
-    box-shadow: none;
-  }
-  
-  @keyframes pulse {
-    0% { box-shadow: var(--glow-primary); }
-    50% { box-shadow: 0 0 10px rgba(139, 92, 246, 0.3), 0 0 20px rgba(139, 92, 246, 0.2); }
-    100% { box-shadow: var(--glow-primary); }
-  }
-
-  .policy-info { flex: 1; }
-  
-  .policy-name { 
-    font-weight: 600; 
-    font-size: 0.95rem;
-    color: var(--text-primary);
-    font-family: var(--heading-font);
-  }
-  
-  .policy-desc { 
-    font-size: 0.8rem; 
-    color: var(--text-muted); 
-    margin-top: 4px;
-    line-height: 1.4;
-  }
-  
-  .policy-mark { 
-    font-size: 0.75rem; 
-    color: var(--text-muted); 
-    font-family: var(--heading-font);
-    background: var(--surface-elevated);
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-weight: 500;
-    border: 1px solid var(--border);
-  }
-
-  .status {
-    text-align: center;
-    padding: var(--space-md);
-    border-radius: var(--radius-md);
-    font-size: 0.875rem;
-    margin-bottom: var(--space-md);
-    max-width: 480px;
-    margin-left: auto;
-    margin-right: auto;
-    font-weight: 500;
-    transition: all var(--transition-normal);
-    border: 1px solid;
-    position: relative;
-  }
-  
-  .status.ok { 
-    background: var(--ok-bg); 
-    color: var(--ok-text);
-    border-color: var(--ok-border);
-    box-shadow: var(--glow-success);
-  }
-  
-  .status.err { 
-    background: var(--err-bg); 
-    color: var(--err-text);
-    border-color: var(--err-border);
-    box-shadow: var(--glow-error);
-  }
-  
-  .status.info { 
-    background: var(--info-bg); 
-    color: var(--info-text);
-    border-color: var(--info-border);
-    box-shadow: var(--glow-primary);
-  }
-  
-  .inline-status {
-    max-width: none;
-    margin-left: 0;
-    margin-right: 0;
-  }
-
-  .loading { 
-    text-align: center; 
-    color: var(--text-muted); 
-    padding: var(--space-2xl);
-    font-size: 0.875rem;
-    font-weight: 500;
-    font-family: var(--heading-font);
-  }
-  
-  .ip-list { font-family: var(--heading-font); font-size: 0.82rem; }
-  .ip-item { display: block; padding: 4px 0; }
-  .ip-v4 { color: var(--info-neon); font-weight: 600; }
-  .ip-v6 { color: var(--primary-neon); font-weight: 600; }
-  .ip-empty { color: var(--text-light); font-style: italic; }
-
-  .field-grid {
-    display: grid;
-    gap: var(--space-md);
-    margin-bottom: var(--space-md);
-  }
-  
-  .field-label {
-    display: block;
-    margin-bottom: var(--space-xs);
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--text-primary);
-    font-family: var(--heading-font);
-  }
-  
-  .text-input {
-    width: 100%;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 10px 14px;
-    font-size: 0.95rem;
-    color: var(--text-primary);
-    background: var(--surface);
-    transition: all var(--transition-normal);
-    font-family: var(--body-font);
-    font-weight: 400;
-  }
-  
-  .text-input:focus {
-    outline: none;
-    border-color: var(--primary-purple);
-    background: var(--surface);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
-  }
-  
-  .text-input:hover {
-    border-color: var(--border-light);
-  }
-  
-  .text-input:disabled {
-    background: var(--border);
-    color: var(--text-muted);
-    cursor: not-allowed;
-  }
-
-  .action-button {
-    width: 100%;
-    border: none;
-    border-radius: var(--radius-md);
-    padding: 12px 20px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #fff;
-    background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-purple-dark) 100%);
-    cursor: pointer;
-    transition: all var(--transition-normal);
-    box-shadow: var(--shadow-md);
-    position: relative;
-    overflow: hidden;
-    font-family: var(--heading-font);
-    border: 1px solid var(--primary-purple);
-  }
-  
-  .action-button::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: left 0.5s;
-  }
-  
-  .action-button:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-    background: linear-gradient(135deg, var(--primary-purple-light) 0%, var(--primary-purple) 100%);
-  }
-  
-  .action-button:hover:not(:disabled)::before {
-    left: 100%;
-  }
-  
-  .action-button:active:not(:disabled) {
-    transform: translateY(0);
-  }
-  
-  .action-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: var(--shadow-sm);
-    background: linear-gradient(135deg, var(--border) 0%, var(--border-light) 100%);
-    border-color: var(--border);
-  }
-
-.admin-panel {
-    margin-top: var(--space-lg);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--border);
-    border-color: var(--accent-violet);
-  }
-  
-  .empty-state {
-    border: 1px dashed var(--border);
-    border-radius: var(--radius-lg);
-    padding: var(--space-lg);
-    font-size: 0.875rem;
-    line-height: 1.6;
-    text-align: center;
-    color: var(--text-muted);
-    background: var(--surface);
-    border-color: var(--primary-purple);
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.05);
-  }
-  
-  .checkbox-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    margin-top: var(--space-md);
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    cursor: pointer;
-    user-select: none;
-    padding: var(--space-xs) 0;
-  }
-  
-  .checkbox-row input {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--primary-purple);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-  }
-  
-  .checkbox-row:hover {
-    color: var(--text-primary);
-  }
-  
-  .card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: var(--space-md);
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  
-  @media (max-width: 768px) {
-    .card-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-  
-  @media (min-width: 1200px) {
-    .card-grid {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
-  
-  @media (min-width: 1600px) {
-    .card-grid {
-      grid-template-columns: repeat(4, 1fr);
-    }
-  }
-  
-  .traffic-section {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-  }
-  
-  .traffic-period h3 {
-    font-family: var(--heading-font);
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--primary-purple);
-    margin-bottom: var(--space-xs);
-    font-weight: 600;
-  }
-  
-  .traffic-period .info-row {
-    padding: var(--space-xs) 0;
-  }
-  
-  .traffic-period .info-label {
-    font-size: 0.8rem;
-  }
-  
-  .traffic-period .info-value {
-    font-size: 0.78rem;
-  }
-  
-  .window-selector {
-    display: flex;
-    gap: var(--space-xs);
-    flex-wrap: wrap;
-  }
-  
-  .window-btn {
-    padding: var(--space-xs) var(--space-sm);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--text-secondary);
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    font-family: var(--heading-font);
-    font-weight: 600;
-  }
-  
-  .window-btn:hover {
-    border-color: var(--primary-purple);
-    color: var(--primary-purple);
-  }
-  
-  .window-btn.active {
-    background: var(--primary-purple);
-    border-color: var(--primary-purple);
-    color: var(--bg);
-  }
-  
-  .topk-refresh {
-    margin-top: var(--space-xs);
-  }
-  
-  .topk-table {
-    width: 100%;
-    font-size: 0.72rem;
-  }
-  
-  .topk-header {
-    display: flex;
-    padding: var(--space-xs) var(--space-sm);
-    border-bottom: 1px solid var(--border);
-    font-weight: 700;
-    color: var(--primary-purple);
-    text-transform: uppercase;
-    font-size: 0.65rem;
-    letter-spacing: 0.03em;
-    gap: var(--space-xs);
-  }
-  
-  .topk-row {
-    display: flex;
-    padding: var(--space-xs) var(--space-sm);
-    border-bottom: 1px solid var(--border-light);
-    align-items: center;
-    gap: var(--space-xs);
-  }
-  
-  .topk-row:last-child {
-    border-bottom: none;
-  }
-  
-  .topk-rank {
-    color: var(--text-secondary);
-    font-weight: 600;
-    font-size: 0.7rem;
-    width: 20px;
-    flex-shrink: 0;
-  }
-  
-  .topk-ip {
-    font-family: monospace;
-    font-size: 0.72rem;
-    flex: 1.5;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  .topk-policy {
-    font-size: 0.68rem;
-    font-weight: 600;
-    color: var(--primary);
-    width: 60px;
-    flex-shrink: 0;
-    text-align: center;
-  }
-  
-  .topk-download, .topk-upload, .topk-total {
-    text-align: right;
-    font-size: 0.68rem;
-    font-family: monospace;
-    width: 60px;
-    flex-shrink: 0;
-  }
-  
-  .topk-total {
-    font-weight: 700;
-    color: var(--primary-purple);
-  }
-  
-  .lang-selector {
-    position: fixed;
-    top: var(--space-md);
-    right: var(--space-md);
-    padding: 8px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--surface);
-    color: var(--text-primary);
-    font-size: 0.8rem;
-    cursor: pointer;
-    outline: none;
-    transition: all var(--transition-normal);
-    font-weight: 600;
-    font-family: var(--heading-font);
-    box-shadow: var(--shadow);
-    z-index: 1000;
-    border-color: var(--primary-purple);
-  }
-  
-  .lang-selector:hover {
-    border-color: var(--primary-purple);
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-1px);
-  }
-  
-  .lang-selector:focus {
-    border-color: var(--primary-purple);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
-  }
-  </style>
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px); opacity: 0; transition: .2s; background: var(--text); color: var(--bg); padding: 9px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100% - 32px); z-index: 10; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateX(-50%); }
+.toast.err { background: var(--err); color: var(--surface); }
+.banner { border-radius: 10px; padding: 10px 12px; font-size: 13px; background: var(--err-soft); color: var(--err); margin-bottom: 12px; }
+.banner.warn { background: var(--warn-soft); color: var(--warn); }
+.skeleton { height: 14px; border-radius: 6px; background: var(--surface-2); margin: 8px 0; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .5; } }
+footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 20px; }
+@media (max-width: 640px) { .input, select, .dev select { font-size: 16px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
 </head>
 <body>
-<select id="langSelect" class="lang-selector">
-  <option value="en">EN</option>
-  <option value="zh">中文</option>
-  <option value="ja">日本語</option>
-</select>
-<h1 id="mainTitle">WLT Traffic Policy</h1>
-<div id="status"></div>
-<div id="app"><div class="loading">Loading...</div></div>
-
+<div class="wrap">
+  <header>
+    <h1 class="brand">
+      <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h4l3-7 4 14 3-7h2"/></svg></span>
+      <span data-t="brand"></span>
+    </h1>
+    <div class="lang" id="lang" role="group"></div>
+  </header>
+  <main>
+    <section class="card" id="route"><div class="skeleton"></div><div class="skeleton" style="width:60%"></div></section>
+    <section class="card" id="traffic" hidden></section>
+    <section class="card" id="admin" hidden></section>
+  </main>
+  <footer data-t="footer"></footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
-const translations = {
-  en: {
-    title: "Network Control - Device Connection Manager",
-    loading: "Loading device information...",
-    error: "Error: ",
-    failedLoadDeviceInfo: "Failed to load device information",
-    failedLoadPolicies: "Failed to load connection options",
-    failedLoadFeatures: "Failed to load server capabilities",
-    trafficUsage: "Traffic Usage",
-    today: "Today",
-    thisWeek: "This Week",
-    thisMonth: "This Month",
-    upload: "Upload",
-    download: "Download",
-    total: "Total",
-    trafficLoadFailed: "Failed to load traffic data",
-    applyPolicy: "Applying connection: ",
-    policySetTo: "Connection set to: ",
-    resolveDevice: "Look up another device",
-    resolvingDevice: "Finding device...",
-    adminManagementDisabled: "Remote device management is disabled on this server. Set <code>admin_psk</code> in the config to enable managing other devices by IP.",
-    enterPsk: "Please enter the access password before looking up another device.",
-    enterTargetIp: "Please enter the target IP address to find another device.",
-    resolveDeviceStarted: "Looking up device ",
-    deviceResolved: "Device found: ",
-    resolveFirstDevice: "Please find a device first before changing its connection.",
-    enterPskForAdmin: "Please enter the access password before changing another device.",
-    applyRemotePolicy: "Changing connection for: ",
-    remotePolicySetTo: "Device connection set to: ",
-    myDevice: "My Device",
-    manageThisDevice: "Settings for this device",
-    myDeviceDescription: "This shows your device's information and lets you choose how it connects. Changes apply immediately.",
-    deviceInfo: "Device Information",
-    sourceIp: "Your IP Address",
-    macAddress: "Device ID",
-    ipAddress: "IP Address",
-    currentPolicy: "Current Connection",
-    selectPolicy: "Choose how this device connects",
-    interruptConnections: "Force immediate switch (may briefly disconnect active downloads)",
-    manageAnotherDevice: "Control another device",
-    adminDescription: "Use the access password and a target IP to find another device, then change its connection through the protected management system. The password stays only in this page.",
-    preSharedKey: "Access Password",
-    enterPskPlaceholder: "Enter access password",
-    targetIp: "Device IP Address",
-    ipPlaceholder: "192.168.1.42 or 2001:db8::42",
-    none: "none",
-    unknown: "unknown",
-    resolvedDevice: "Found Device",
-    lookupIp: "Lookup IP",
-    setRemotePolicy: "Change how it connects",
-    enterPskAndTargetIp: "Enter the access password and target IP, then look up the device to see its connection and addresses.",
-    topKUsers: "Top K Users",
-    topKUsersTitle: "Top IPv4 Users by Traffic",
-    selectWindow: "Period",
-    noData: "No traffic data",
-    clickRefresh: "Click refresh to load",
-    refresh: "Refresh"
-  },
+'use strict';
+const I18N = {
   zh: {
-    title: "网络通",
-    loading: "加载设备信息...",
-    error: "错误：",
-    failedLoadDeviceInfo: "加载设备信息失败",
-    failedLoadPolicies: "加载连接选项失败",
-    failedLoadFeatures: "加载服务器功能失败",
-    trafficUsage: "流量统计",
-    today: "今日",
-    thisWeek: "本周",
-    thisMonth: "本月",
-    upload: "上传",
-    download: "下载",
-    total: "合计",
-    trafficLoadFailed: "加载流量数据失败",
-    applyPolicy: "应用连接：",
-    policySetTo: "连接已设置为：",
-    resolveDevice: "查找其他设备",
-    resolvingDevice: "查找设备中...",
-    adminManagementDisabled: "服务器上禁用了远程设备管理功能。在配置中设置 <code>admin_psk</code> 来启用通过IP管理其他设备。",
-    enterPsk: "请先输入访问密码，再查找其他设备。",
-    enterTargetIp: "请输入目标IP地址来查找其他设备。",
-    resolveDeviceStarted: "正在查找设备",
-    deviceResolved: "设备已找到：",
-    resolveFirstDevice: "请先查找一个设备，再更改其连接方式。",
-    enterPskForAdmin: "请先输入访问密码，再更改其他设备。",
-    applyRemotePolicy: "更改设备连接：",
-    remotePolicySetTo: "设备连接已设置为：",
-    myDevice: "我的设备",
-    manageThisDevice: "设备设置",
-    myDeviceDescription: "这里显示您的设备信息，让您选择连接方式。更改会立即生效。",
-    deviceInfo: "设备信息",
-    sourceIp: "您的IP地址",
-    macAddress: "设备标识",
-    ipAddress: "IP地址",
-    currentPolicy: "当前连接",
-    selectPolicy: "选择连接方式",
-    interruptConnections: "强制立即切换（可能会短暂断开正在进行的下载）",
-    manageAnotherDevice: "控制其他设备",
-    adminDescription: "使用访问密码和目标IP查找其他设备，然后通过受保护的管理系统更改其连接。密码仅保存在本页面。",
-    preSharedKey: "访问密码",
-    enterPskPlaceholder: "输入访问密码",
-    targetIp: "设备IP地址",
-    ipPlaceholder: "192.168.1.42 或 2001:db8::42",
-    none: "无",
-    unknown: "未知",
-    resolvedDevice: "已找到设备",
-    lookupIp: "查找IP",
-    setRemotePolicy: "更改连接方式",
-    enterPskAndTargetIp: "输入访问密码和目标IP，然后查找设备以查看其连接和地址。",
-    topKUsers: "流量排行",
-    topKUsersTitle: "IPv4 用户流量排行",
-    selectWindow: "时间段",
-    noData: "暂无流量数据",
-    clickRefresh: "点击刷新加载",
-    refresh: "刷新"
+    brand: '网络通', footer: '设备以 MAC 地址识别，设置立即生效', language: '语言',
+    route: '上网线路', thisDevice: '本机', mac: 'MAC', ip: 'IP', me: '本机',
+    unknownDevice: '无法识别本设备（不在同一局域网，或路由器尚未学到它的地址）。',
+    loadFailed: '加载失败：', retry: '重试',
+    resetConns: '切换时断开已有连接，让新线路立即生效',
+    switching: '正在切换到「{p}」…', switched: '已切换到「{p}」', failed: '操作失败：',
+    traffic: '我的流量', now: '实时', upload: '上传', download: '下载',
+    today: '今天', yesterday: '昨天', week: '近 7 天', month: '本月', last14: '近 14 天', tz: '时区 {z}',
+    trafficOff: '未启用流量统计。', trafficDown: '流量服务暂不可用。', noTrafficYet: '近 14 天暂无流量',
+    trafficUnknown: '无法识别本设备，暂无流量数据。',
+    admin: '管理', adminHint: '输入管理密码后可管理所有设备', psk: '管理密码', unlock: '进入', unlocking: '验证中…',
+    lock: '退出', devices: '设备', ranking: '排行', search: '搜索 IP / MAC / 线路',
+    noDevices: '暂无设备', noMatch: '没有匹配的设备', noIp: '没有已知 IP，暂不能远程设置',
+    lastSeen: '最后访问', lookupOnRouter: '在路由器上查找 {ip}', details: '详情', hide: '收起',
+    badPsk: '管理密码错误', windowLabel: '时间段', lastmonth: '上月', d30: '近 30 天',
+    noData: '暂无数据', never: '未访问过', unknown: '未知', unknownPolicy: '未知线路（{p}）',
+    adminTrafficDown: '流量服务暂不可用，以下流量数据缺失。', routeOf: '{d} 的线路', detailsOf: '{d} 的流量详情',
+    resetNote: '远程切换会断开该设备的已有连接。',
+  },
+  en: {
+    brand: 'WLT', footer: 'Devices are identified by MAC address; changes apply immediately', language: 'Language',
+    route: 'Route', thisDevice: 'This device', mac: 'MAC', ip: 'IP', me: 'You',
+    unknownDevice: 'This device could not be identified (not on the same LAN, or the router has not learned its address yet).',
+    loadFailed: 'Failed to load: ', retry: 'Retry',
+    resetConns: 'Reset existing connections so the new route applies immediately',
+    switching: 'Switching to “{p}”…', switched: 'Now using “{p}”', failed: 'Failed: ',
+    traffic: 'My traffic', now: 'now', upload: 'Upload', download: 'Download',
+    today: 'Today', yesterday: 'Yesterday', week: 'Last 7 days', month: 'This month', last14: 'Last 14 days', tz: 'Time zone {z}',
+    trafficOff: 'Traffic statistics are not enabled.', trafficDown: 'The traffic service is unavailable.', noTrafficYet: 'No traffic in the last 14 days',
+    trafficUnknown: 'This device could not be identified, so there is no traffic data.',
+    admin: 'Admin', adminHint: 'Enter the admin password to manage every device', psk: 'Admin password', unlock: 'Unlock', unlocking: 'Checking…',
+    lock: 'Lock', devices: 'Devices', ranking: 'Ranking', search: 'Search IP / MAC / route',
+    noDevices: 'No devices yet', noMatch: 'No matching devices', noIp: 'No known IP; cannot change remotely',
+    lastSeen: 'Last visit', lookupOnRouter: 'Look up {ip} on the router', details: 'Details', hide: 'Hide',
+    badPsk: 'Wrong admin password', windowLabel: 'Period', lastmonth: 'Last month', d30: 'Last 30 days',
+    noData: 'No data', never: 'never', unknown: 'unknown', unknownPolicy: 'Unknown route ({p})',
+    adminTrafficDown: 'The traffic service is unavailable; usage below is missing.', routeOf: 'Route of {d}', detailsOf: 'Traffic details of {d}',
+    resetNote: 'Changing a route here resets that device’s existing connections.',
   },
   ja: {
-    title: "WLT",
-    loading: "デバイス情報を読み込み中...",
-    error: "エラー：",
-    failedLoadDeviceInfo: "デバイス情報の読み込みに失敗しました",
-    failedLoadPolicies: "接続オプションの読み込みに失敗しました",
-    failedLoadFeatures: "サーバーカパビリティの読み込みに失敗しました",
-    trafficUsage: "トラフィック統計",
-    today: "今日",
-    thisWeek: "今週",
-    thisMonth: "今月",
-    upload: "アップロード",
-    download: "ダウンロード",
-    total: "合計",
-    trafficLoadFailed: "トラフィックデータの読み込みに失敗しました",
-    applyPolicy: "接続を適用中：",
-    policySetTo: "接続が設定されました：",
-    resolveDevice: "別のデバイスを検索",
-    resolvingDevice: "デバイスを検索中...",
-    adminManagementDisabled: "サーバーでリモートデバイス管理が無効になっています。他のデバイスをIPで管理するには、設定で <code>admin_psk</code> を設定してください。",
-    enterPsk: "他のデバイスを検索する前に、アクセスパスワードを入力してください。",
-    enterTargetIp: "他のデバイスを検索するために、ターゲットIPを入力してください。",
-    resolveDeviceStarted: "デバイスを検索中",
-    deviceResolved: "デバイスが見つかりました：",
-    resolveFirstDevice: "デバイスの接続を変更する前に、まずデバイスを検索してください。",
-    enterPskForAdmin: "他のデバイスを変更する前に、アクセスパスワードを入力してください。",
-    applyRemotePolicy: "接続を変更中：",
-    remotePolicySetTo: "デバイス接続が設定されました：",
-    myDevice: "マイデバイス",
-    manageThisDevice: "デバイスの設定",
-    myDeviceDescription: "ここではデバイスの情報が表示され、接続方法を選択できます。変更は即時に適用されます。",
-    deviceInfo: "デバイス情報",
-    sourceIp: "あなたのIPアドレス",
-    macAddress: "デバイスID",
-    ipAddress: "IPアドレス",
-    currentPolicy: "現在の接続",
-    selectPolicy: "接続方法を選択",
-    interruptConnections: "即時切り替えを強制（アクティブなダウンロードが一時的に切断される可能性があります）",
-    manageAnotherDevice: "他のデバイスを制御",
-    adminDescription: "アクセスパスワードとターゲットIPを使用して別のデバイスを検索し、保護された管理システムを介してその接続を変更します。パスワードはこのページにのみ保持されます。",
-    preSharedKey: "アクセスパスワード",
-    enterPskPlaceholder: "アクセスパスワードを入力",
-    targetIp: "デバイスIPアドレス",
-    ipPlaceholder: "192.168.1.42 または 2001:db8::42",
-    none: "なし",
-    unknown: "不明",
-    resolvedDevice: "見つかったデバイス",
-    lookupIp: "IP検索",
-    setRemotePolicy: "接続方法を変更",
-    enterPskAndTargetIp: "アクセスパスワードとターゲットIPを入力し、デバイスを検索してその接続とアドレスを確認してください。",
-    topKUsers: "トラフィック排行",
-    topKUsersTitle: "IPv4 ユーザートラフィックランキング",
-    selectWindow: "期間",
-    noData: "トラフィックデータなし",
-    clickRefresh: "更新をクリックしてロード",
-    refresh: "更新"
-  }
+    brand: 'WLT', footer: 'デバイスは MAC アドレスで識別され、変更は即時に反映されます', language: '言語',
+    route: '回線', thisDevice: 'このデバイス', mac: 'MAC', ip: 'IP', me: '自分',
+    unknownDevice: 'このデバイスを識別できません（同じ LAN にいないか、ルーターがまだアドレスを学習していません）。',
+    loadFailed: '読み込みに失敗しました：', retry: '再試行',
+    resetConns: '切り替え時に既存の接続をリセットし、新しい回線をすぐに反映する',
+    switching: '「{p}」に切り替え中…', switched: '「{p}」に切り替えました', failed: '失敗しました：',
+    traffic: '自分のトラフィック', now: '現在', upload: 'アップロード', download: 'ダウンロード',
+    today: '今日', yesterday: '昨日', week: '過去7日間', month: '今月', last14: '過去14日間', tz: 'タイムゾーン {z}',
+    trafficOff: 'トラフィック統計は無効です。', trafficDown: 'トラフィックサービスに接続できません。', noTrafficYet: '過去14日間のトラフィックはありません',
+    trafficUnknown: 'このデバイスを識別できないため、トラフィックデータはありません。',
+    admin: '管理', adminHint: '管理パスワードを入力すると、すべてのデバイスを管理できます', psk: '管理パスワード', unlock: 'ロック解除', unlocking: '確認中…',
+    lock: 'ロック', devices: 'デバイス', ranking: 'ランキング', search: 'IP / MAC / 回線で検索',
+    noDevices: 'デバイスがありません', noMatch: '一致するデバイスはありません', noIp: 'IP が不明なためリモートで変更できません',
+    lastSeen: '最終アクセス', lookupOnRouter: 'ルーターで {ip} を検索', details: '詳細', hide: '閉じる',
+    badPsk: '管理パスワードが違います', windowLabel: '期間', lastmonth: '先月', d30: '過去30日間',
+    noData: 'データなし', never: '記録なし', unknown: '不明', unknownPolicy: '不明な回線（{p}）',
+    adminTrafficDown: 'トラフィックサービスに接続できないため、使用量は表示されません。', routeOf: '{d} の回線', detailsOf: '{d} のトラフィック詳細',
+    resetNote: 'ここで回線を変更すると、そのデバイスの既存の接続はリセットされます。',
+  },
+};
+const LANGS = [['zh', '中', '中文'], ['en', 'EN', 'English'], ['ja', '日', '日本語']];
+
+const S = {
+  lang: 'zh', device: null, loadErr: '', policies: [], features: {},
+  traffic: null, chartPick: {}, switching: '', resetConns: true,
+  admin: {
+    psk: '', open: false, unlocking: false, tab: 'devices', devices: null, trafficAvail: true,
+    pinned: {}, q: '', rank: null, rankWin: 'today', rankSeq: 0, expanded: '', detail: {}, busy: '',
+  },
 };
 
-let currentLang = 'en';
-let deviceData = null;
-let trafficData = null;
-let policies = [];
-let applying = false;
-let adminEnabled = false;
-let selfState = {
-  flushConntrack: true
-};
-let adminState = {
-  psk: '',
-  ip: '',
-  lookupIP: '',
-  device: null,
-  trafficData: null,
-  topKData: null,
-  topKWindow: 'today',
-  statusMessage: '',
-  statusType: 'info',
-  loading: false,
-  applying: false,
-  flushConntrack: true
-};
+function store(k, v) { try { v === undefined ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (e) {} }
+function load(k) { try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function pref(k, v) { try { if (v === undefined) return localStorage.getItem(k) || ''; localStorage.setItem(k, v); } catch (e) { return ''; } }
 
-function t(key) {
-return translations[currentLang][key] || translations['en'][key];
+function t(k, vars) {
+  let s = (I18N[S.lang] && I18N[S.lang][k]) || I18N.en[k] || k;
+  if (vars) for (const [a, b] of Object.entries(vars)) s = s.replace('{' + a + '}', b);
+  return s;
 }
-
-function detectLanguage() {
-  const savedLang = localStorage.getItem('wlt-language');
-  if (savedLang && translations[savedLang]) {
-    currentLang = savedLang;
-  } else {
-    const browserLang = navigator.language || navigator.userLanguage;
-    const langCode = browserLang.toLowerCase();
-    
-    if (langCode.startsWith('zh')) {
-      currentLang = 'zh';
-    } else if (langCode.startsWith('ja')) {
-      currentLang = 'ja';
-    } else {
-      currentLang = 'en';
-    }
-  }
-  
-  document.getElementById('langSelect').value = currentLang;
-  document.getElementById('pageTitle').textContent = t('title');
-  document.getElementById('mainTitle').textContent = t('title');
-  
-  return currentLang;
+function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function bytes(n) {
+  n = Number(n) || 0;
+  const u = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return (i === 0 ? n : n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : n.toFixed(0)) + ' ' + u[i];
 }
-
-function setLanguage(lang) {
-  if (translations[lang]) {
-    currentLang = lang;
-    localStorage.setItem('wlt-language', lang);
-    document.getElementById('langSelect').value = lang;
-    render();
-  }
+function rate(bps) { // bytes/s -> bits/s
+  let b = (Number(bps) || 0) * 8;
+  const u = ['bps', 'Kbps', 'Mbps', 'Gbps'];
+  let i = 0;
+  while (b >= 1000 && i < u.length - 1) { b /= 1000; i++; }
+  return (i === 0 ? b.toFixed(0) : b < 10 ? b.toFixed(1) : b.toFixed(0)) + ' ' + u[i];
 }
-
-document.getElementById('langSelect').addEventListener('change', function() {
-  setLanguage(this.value);
-});
-
-function escapeHtml(value) {
-  return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
-    return {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;'
-    }[char];
-  });
+function ago(ts) {
+  const ms = ts ? new Date(ts).getTime() : NaN;
+  if (!Number.isFinite(ms) || ms <= 0 || String(ts).startsWith('0001')) return t('never');
+  const s = Math.max(0, (Date.now() - ms) / 1000);
+  const f = new Intl.RelativeTimeFormat(S.lang, { numeric: 'auto' });
+  if (s < 60) return f.format(0, 'second');
+  if (s < 3600) return f.format(-Math.round(s / 60), 'minute');
+  if (s < 86400) return f.format(-Math.round(s / 3600), 'hour');
+  return f.format(-Math.round(s / 86400), 'day');
 }
-
-function renderStatus(message, type, extraClass) {
-  if (!message) return '';
-  return '<div class="status ' + (type || 'info') + (extraClass ? ' ' + extraClass : '') + '">' + escapeHtml(message) + '</div>';
+function shortDate(d) {
+  const [y, m, day] = d.split('-').map(Number);
+  try { return new Intl.DateTimeFormat(S.lang, { month: 'short', day: 'numeric' }).format(new Date(y, m - 1, day)); } catch (e) { return d.slice(5); }
 }
-
-function renderIPList(dev) {
-  const ip = dev.source_ip;
-  if (!ip) return '<span class="ip-item ip-empty">' + t('none') + '</span>';
-  return '<span class="ip-item">' + escapeHtml(ip) + '</span>';
+function policyLabel(name) {
+  const p = S.policies.find(p => p.name === name);
+  return p ? (p.description || p.name) : (name ? t('unknownPolicy', { p: name }) : t('unknown'));
 }
+function looksLikeIP(q) { return /^(\d{1,3}\.){3}\d{1,3}$/.test(q) || (q.includes(':') && /^[0-9a-f:.]+$/i.test(q) && !/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i.test(q)); }
 
-function renderPolicyCards(currentPolicy, handlerName, disabled) {
-  return policies.map(function (policy) {
-    const active = policy.name === currentPolicy ? 'active' : '';
-    const locked = disabled ? 'disabled' : '';
-    const clickHandler = disabled ? '' : "onclick='" + handlerName + '(' + JSON.stringify(policy.name) + ")'";
-    return `
-      <div class="policy-card ${active} ${locked}" ${clickHandler}>
-        <div class="policy-dot"></div>
-        <div class="policy-info">
-          <div class="policy-name">${escapeHtml(policy.name)}</div>
-          <div class="policy-desc">${escapeHtml(policy.description || '')}</div>
-        </div>
-        <div class="policy-mark">mark ${escapeHtml(policy.mark)}</div>
-      </div>
-    `;
-  }).join('');
-}
-
-async function readJSON(res) {
-  try {
-    return await res.json();
-  } catch (_) {
-    return null;
-  }
-}
-
-function formatBytes(bytes) {
-  if (bytes == null) return '0 B';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-}
-
-async function load() {
-  try {
-    const [devRes, polRes, featureRes, trafficRes] = await Promise.all([
-      fetch('/api/device'),
-      fetch('/api/policies'),
-      fetch('/api/features'),
-      fetch('/api/traffic').catch(function() { return {ok: false}; })
-    ]);
-    if (!devRes.ok) throw new Error(t('failedLoadDeviceInfo'));
-    if (!polRes.ok) throw new Error(t('failedLoadPolicies'));
-    if (!featureRes.ok) throw new Error(t('failedLoadFeatures'));
-    deviceData = await devRes.json();
-    policies = await polRes.json();
-    const features = await featureRes.json();
-    adminEnabled = !!features.admin_enabled;
-    if (trafficRes.ok) {
-      trafficData = await trafficRes.json();
-    } else {
-      trafficData = {today: {upload: 0, download: 0, total: 0}, week: {upload: 0, download: 0, total: 0}, month: {upload: 0, download: 0, total: 0}};
-    }
-    
-    // Update policy descriptions to be user-friendly
-    policies = policies.map(policy => {
-      if (policy.name === 'direct') {
-        return { ...policy, description: 'Standard connection - goes straight to the internet' };
-      } else if (policy.name === 'proxy') {
-        return { ...policy, description: 'Goes through a proxy server' };
-      } else if (policy.name === 'vpn') {
-        return { ...policy, description: 'Routes through VPN for privacy' };
-      }
-      return policy;
-    });
-    
-    render();
-  } catch (e) {
-    showStatus(t('error') + e.message, 'err');
-    document.getElementById('app').innerHTML = '';
-  }
-}
-
-function showStatus(msg, type) {
-  const el = document.getElementById('status');
-  el.className = 'status ' + (type || 'info');
+let toastTimer;
+function toast(msg, err) {
+  const el = document.getElementById('toast');
   el.textContent = msg;
-  if (type === 'ok') {
-    setTimeout(function () {
-      el.textContent = '';
-      el.className = '';
-    }, 3000);
-  }
+  el.className = 'toast show' + (err ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast' + (err ? ' err' : ''); }, err ? 4500 : 2200);
 }
 
-function render() {
-  const dev = deviceData;
-  const app = document.getElementById('app');
-  
-  // Update main title when language changes
-  document.getElementById('mainTitle').textContent = t('title');
-  
-  if (!dev) {
-    app.innerHTML = `<div class="loading">${t('loading')}</div>`;
-    return;
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  let body = null;
+  try { body = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    const e = new Error((body && body.error) || ('HTTP ' + res.status));
+    e.status = res.status;
+    throw e;
   }
-  
-  const selfPolicyCards = renderPolicyCards(dev.policy, 'setPolicy', applying);
-    const adminPolicyCards = adminState.device
-      ? renderPolicyCards(adminState.device.policy, 'setAdminPolicy', adminState.loading || adminState.applying)
-      : '';
-
-    const adminDeviceCard = !adminEnabled ? '' : adminState.device ? `
-      <div class="card admin-card">
-        <div class="card-tag admin">${t('resolvedDevice')}</div>
-        <div class="card-title">${escapeHtml(adminState.lookupIP)}</div>
-        <div class="info-row">
-          <span class="info-label">${t('sourceIp')}</span>
-          <span class="info-value">${escapeHtml(adminState.device.source_ip || '-')}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">${t('macAddress')}</span>
-          <span class="info-value">${escapeHtml(adminState.device.mac || t('unknown'))}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">${t('ipAddress')}</span>
-          <span class="info-value"><span class="ip-list">${renderIPList(adminState.device)}</span></span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">${t('currentPolicy')}</span>
-          <span class="info-value" style="font-weight:600;color:var(--primary)">${escapeHtml(adminState.device.policy || '-')}</span>
-        </div>
-      </div>
-    ` : '';
-
-    const adminPolicyCard = !adminEnabled ? '' : adminState.device ? `
-      <div class="card admin-card">
-        <div class="card-tag admin">${t('setRemotePolicy')}</div>
-        <div class="policy-grid">${adminPolicyCards}</div>
-        <label class="checkbox-row">
-          <input type="checkbox" ${adminState.flushConntrack ? 'checked' : ''} onchange="adminState.flushConntrack=this.checked">
-          ${t('interruptConnections')}
-        </label>
-      </div>
-    ` : '';
-
-    const adminTrafficCard = adminState.trafficData ? `
-      <div class="card admin-card">
-        <div class="card-tag admin">${t('trafficUsage')}</div>
-        <div class="card-title">${t('trafficUsage')} - ${escapeHtml(adminState.lookupIP)}</div>
-        <div class="traffic-section">
-          <div class="traffic-period">
-            <h3>${t('today')}</h3>
-            <div class="info-row">
-              <span class="info-label">${t('upload')}</span>
-              <span class="info-value">${formatBytes(adminState.trafficData.today.upload)}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">${t('download')}</span>
-              <span class="info-value">${formatBytes(adminState.trafficData.today.download)}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">${t('total')}</span>
-              <span class="info-value">${formatBytes(adminState.trafficData.today.total)}</span>
-            </div>
-          </div>
-          <div class="traffic-period">
-            <h3>${t('thisWeek')}</h3>
-            <div class="info-row">
-              <span class="info-label">${t('upload')}</span>
-              <span class="info-value">${formatBytes(adminState.trafficData.week.upload)}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">${t('download')}</span>
-              <span class="info-value">${formatBytes(adminState.trafficData.week.download)}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">${t('total')}</span>
-              <span class="info-value">${formatBytes(adminState.trafficData.week.total)}</span>
-            </div>
-          </div>
-          <div class="traffic-period">
-            <h3>${t('thisMonth')}</h3>
-            <div class="info-row">
-              <span class="info-label">${t('upload')}</span>
-              <span class="info-value">${formatBytes(adminState.trafficData.month.upload)}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">${t('download')}</span>
-              <span class="info-value">${formatBytes(adminState.trafficData.month.download)}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">${t('total')}</span>
-              <span class="info-value">${formatBytes(adminState.trafficData.month.total)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    ` : '';
-
-    const topKWindow = adminState.topKWindow || 'today';
-    const adminTopKCard = !adminState.psk ? '' : `
-      <div class="card admin-card">
-        <div class="card-tag admin">${t('topKUsers')}</div>
-        <div class="card-title">${t('topKUsersTitle')}</div>
-        <div class="traffic-section">
-          <div class="traffic-period">
-            <h3>${t('selectWindow')}</h3>
-            <div class="window-selector">
-              <button class="window-btn ${topKWindow === 'today' ? 'active' : ''}" onclick="setTopKWindow('today')">${t('today')}</button>
-              <button class="window-btn ${topKWindow === '7days' ? 'active' : ''}" onclick="setTopKWindow('7days')">${t('thisWeek')}</button>
-              <button class="window-btn ${topKWindow === 'month' ? 'active' : ''}" onclick="setTopKWindow('month')">${t('thisMonth')}</button>
-            </div>
-            <div class="topk-refresh">
-              <button class="window-btn" onclick="fetchTopK()">${t('refresh')}</button>
-            </div>
-          </div>
-          ${adminState.topKData && adminState.topKData.length > 0 ? `
-          <div class="topk-table">
-            <div class="topk-header">
-              <span>#</span>
-              <span>${t('ipAddress')}</span>
-              <span>${t('policy')}</span>
-              <span>${t('download')}</span>
-              <span>${t('upload')}</span>
-              <span>${t('total')}</span>
-            </div>
-            ${adminState.topKData.map((entry, i) => `
-            <div class="topk-row">
-              <span class="topk-rank">${i + 1}</span>
-              <span class="topk-ip">${escapeHtml(entry.ip || entry.mac || '-')}</span>
-              <span class="topk-policy">${escapeHtml(entry.policy ?? '-')}</span>
-              <span class="topk-download">${formatBytes(entry.download || 0)}</span>
-              <span class="topk-upload">${formatBytes(entry.upload || 0)}</span>
-              <span class="topk-total">${formatBytes(entry.total || 0)}</span>
-            </div>
-            `).join('')}
-          </div>
-          ` : adminState.topKData && adminState.topKData.length === 0 ? `
-          <div class="info-row"><span class="info-label">${t('noData')}</span><span class="info-value">-</span></div>
-          ` : `
-          <div class="info-row"><span class="info-label">${t('clickRefresh')}</span><span class="info-value">-</span></div>
-          `}
-        </div>
-      </div>
-    `;
-
-    const adminResolveCard = !adminEnabled ? `
-      <div class="card admin-card">
-        <div class="card-tag admin">Administrator</div>
-        <div class="card-title">${t('manageAnotherDevice')}</div>
-        <div class="card-copy">${t('adminManagementDisabled')}</div>
-      </div>
-    ` : `
-      <div class="card admin-card">
-        <div class="card-tag admin">Administrator</div>
-        <div class="card-title">${t('manageAnotherDevice')}</div>
-        <div class="card-copy">${t('adminDescription')}</div>
-        ${renderStatus(adminState.statusMessage, adminState.statusType, 'inline-status')}
-        <div class="field-grid">
-          <label>
-            <span class="field-label">${t('preSharedKey')}</span>
-            <input
-              class="text-input"
-              type="password"
-              autocomplete="new-password"
-              placeholder="${t('enterPskPlaceholder')}"
-              value="${escapeHtml(adminState.psk)}"
-              oninput="adminState.psk=this.value"
-            >
-          </label>
-          <label>
-            <span class="field-label">${t('targetIp')}</span>
-            <input
-              class="text-input"
-              type="text"
-              inputmode="text"
-              spellcheck="false"
-              placeholder="${t('ipPlaceholder')}"
-              value="${escapeHtml(adminState.ip)}"
-              oninput="adminState.ip=this.value"
-            >
-          </label>
-        </div>
-        <button class="action-button" onclick="lookupAdminDevice()" ${adminState.loading || adminState.applying ? 'disabled' : ''}>
-          ${adminState.loading ? t('resolvingDevice') : t('resolveDevice')}
-        </button>
-      </div>
-    `;
-
-    app.innerHTML = `
-      <div class="card-grid">
-        <div class="card">
-          <div class="card-tag">${t('trafficUsage')}</div>
-          <div class="card-title">${t('trafficUsage')}</div>
-          <div class="traffic-section">
-            <div class="traffic-period">
-              <h3>${t('today')}</h3>
-              <div class="info-row">
-                <span class="info-label">${t('upload')}</span>
-                <span class="info-value traffic-upload">${formatBytes(trafficData ? trafficData.today.upload : 0)}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">${t('download')}</span>
-                <span class="info-value traffic-download">${formatBytes(trafficData ? trafficData.today.download : 0)}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">${t('total')}</span>
-                <span class="info-value traffic-total">${formatBytes(trafficData ? trafficData.today.total : 0)}</span>
-              </div>
-            </div>
-            <div class="traffic-period">
-              <h3>${t('thisWeek')}</h3>
-              <div class="info-row">
-                <span class="info-label">${t('upload')}</span>
-                <span class="info-value traffic-upload">${formatBytes(trafficData ? trafficData.week.upload : 0)}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">${t('download')}</span>
-                <span class="info-value traffic-download">${formatBytes(trafficData ? trafficData.week.download : 0)}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">${t('total')}</span>
-                <span class="info-value traffic-total">${formatBytes(trafficData ? trafficData.week.total : 0)}</span>
-              </div>
-            </div>
-            <div class="traffic-period">
-              <h3>${t('thisMonth')}</h3>
-              <div class="info-row">
-                <span class="info-label">${t('upload')}</span>
-                <span class="info-value traffic-upload">${formatBytes(trafficData ? trafficData.month.upload : 0)}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">${t('download')}</span>
-                <span class="info-value traffic-download">${formatBytes(trafficData ? trafficData.month.download : 0)}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">${t('total')}</span>
-                <span class="info-value traffic-total">${formatBytes(trafficData ? trafficData.month.total : 0)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-tag self">${t('myDevice')}</div>
-          <div class="card-title">${t('manageThisDevice')}</div>
-          <div class="card-copy">${t('myDeviceDescription')}</div>
-          <h2>${t('deviceInfo')}</h2>
-          <div class="info-row">
-            <span class="info-label">${t('sourceIp')}</span>
-            <span class="info-value">${escapeHtml(dev.source_ip || '-')}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">${t('macAddress')}</span>
-            <span class="info-value">${escapeHtml(dev.mac || t('unknown'))}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">${t('ipAddress')}</span>
-            <span class="info-value"><span class="ip-list">${renderIPList(dev)}</span></span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">${t('currentPolicy')}</span>
-            <span class="info-value" style="font-weight:600;color:var(--primary-purple)">${escapeHtml(dev.policy || '-')}</span>
-          </div>
-        </div>
-        <div class="card">
-          <h2>${t('selectPolicy')}</h2>
-          <div class="policy-grid">${selfPolicyCards}</div>
-          <label class="checkbox-row">
-            <input type="checkbox" id="flushCt" ${selfState.flushConntrack ? 'checked' : ''} onchange="selfState.flushConntrack=this.checked">
-            ${t('interruptConnections')}
-          </label>
-        </div>
-        ${adminResolveCard}
-        ${adminDeviceCard}
-        ${adminPolicyCard}
-        ${adminTrafficCard}
-        ${adminTopKCard}
-      </div>
-    `;
-  }
-
-async function setPolicy(name) {
-  if (applying) return;
-  if (deviceData && deviceData.policy === name) return;
-  applying = true;
-  showStatus(t('applyPolicy') + name + '...', 'info');
-  render();
-  try {
-    const res = await fetch('/api/policy', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({policy: name, flush_conntrack: selfState.flushConntrack})
-    });
-    const data = await readJSON(res);
-    if (!res.ok) throw new Error((data && data.error) || 'Failed');
-    deviceData = data;
-    render();
-    showStatus(t('policySetTo') + name, 'ok');
-  } catch (e) {
-    render();
-    showStatus(t('error') + e.message, 'err');
-  } finally {
-    applying = false;
-    render();
-  }
+  return body;
+}
+function adminApi(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ 'X-WLT-PSK': S.admin.psk }, opts.headers || {});
+  return api(path, opts);
 }
 
-async function lookupAdminDevice() {
-  if (adminState.loading || adminState.applying) return;
-  if (!adminEnabled) {
-    adminState.statusMessage = t('adminManagementDisabled');
-    adminState.statusType = 'err';
-    render();
+// ---------- rendering (each region independently, so refreshing data never
+// rebuilds an input, an open <select> or text being composed with an IME) ----------
+
+function setHTML(id, html) {
+  const el = typeof id === 'string' ? document.getElementById(id) : id;
+  if (el && el.innerHTML !== html) el.innerHTML = html;
+}
+
+function chartBlock(key, series) {
+  if (!series || !series.length) return '';
+  const max = Math.max(0, ...series.map(d => d.upload + d.download));
+  if (max === 0) return `<div class="empty">${esc(t('noTrafficYet'))}</div>`;
+  const W = 700, H = 120, n = series.length;
+  const bw = W / n, gap = Math.min(8, bw * .3);
+  let bars = '';
+  series.forEach((d, i) => {
+    const x = i * bw + gap / 2, w = bw - gap;
+    const hd = d.download / max * (H - 2), hu = d.upload / max * (H - 2);
+    const y = H - hd - hu;
+    if (hu > 0) bars += `<rect x="${x}" y="${y}" width="${w}" height="${Math.max(hu, .5)}" fill="var(--up)"/>`;
+    if (hd > 0) bars += `<rect x="${x}" y="${y + hu}" width="${w}" height="${Math.max(hd, .5)}" fill="var(--down)"/>`;
+    bars += `<rect class="hit" data-act="pick" data-key="${esc(key)}" data-i="${i}" x="${i * bw}" y="0" width="${bw}" height="${H}" fill="transparent"><title>${esc(d.date)}  ↓ ${bytes(d.download)}  ↑ ${bytes(d.upload)}</title></rect>`;
+  });
+  const pi = S.chartPick[key];
+  const pick = pi != null && series[pi] ? `<span class="pick">${esc(shortDate(series[pi].date))} · ↓ ${bytes(series[pi].download)} · ↑ ${bytes(series[pi].upload)}</span>` : '';
+  return `<div class="chart"><div class="axis"><span>${esc(bytes(max))}</span></div>` +
+    `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(t('last14'))}">` +
+    `<line x1="0" x2="${W}" y1="${H - .5}" y2="${H - .5}" stroke="var(--border)" vector-effect="non-scaling-stroke"/>${bars}</svg>` +
+    `<div class="axis"><span>${esc(shortDate(series[0].date))}</span>${n > 1 ? `<span>${esc(shortDate(series[n - 1].date))}</span>` : ''}</div>` +
+    `<div class="legend"><span><i class="dot down" aria-hidden="true"></i>${esc(t('download'))}</span><span><i class="dot up" aria-hidden="true"></i>${esc(t('upload'))}</span><span>${esc(t('last14'))}</span>${pick}</div></div>`;
+}
+
+function trafficBody(tr, key, compact) {
+  if (!tr) return `<div class="skeleton"></div><div class="skeleton" style="width:70%"></div>`;
+  if (!tr.available) return `<div class="empty">${esc(t('trafficDown'))}</div>`;
+  const tile = (k, w) => `<div class="tile"><div class="k">${esc(t(k))}</div><div class="v">${bytes(w.total)}</div>` +
+    `<div class="ud"><span>↓ ${bytes(w.download)}</span><span>↑ ${bytes(w.upload)}</span></div></div>`;
+  return (compact ? '' :
+    `<div class="live">
+       <div class="speed"><div class="k"><i class="dot down" aria-hidden="true"></i>${esc(t('download'))} · ${esc(t('now'))}</div><div class="v">${rate(tr.live.download_bps)}</div></div>
+       <div class="speed"><div class="k"><i class="dot up" aria-hidden="true"></i>${esc(t('upload'))} · ${esc(t('now'))}</div><div class="v">${rate(tr.live.upload_bps)}</div></div>
+     </div>`) +
+    `<div class="tiles">${tile('today', tr.today)}${tile('yesterday', tr.yesterday)}${tile('week', tr.week)}${tile('month', tr.month)}</div>` +
+    chartBlock(key, tr.series);
+}
+
+function known() { return S.device && S.device.mac && S.device.mac !== 'unknown'; }
+
+function renderRoute() {
+  if (S.loadErr) {
+    setHTML('route', `<div class="banner" role="alert">${esc(t('loadFailed'))}${esc(S.loadErr)}</div><button class="btn" data-act="retry">${esc(t('retry'))}</button>`);
     return;
   }
+  const d = S.device;
+  if (!d) return;
+  const ip = d.source_ip || (d.ipv4s && d.ipv4s[0]) || (d.ipv6s && d.ipv6s[0]) || '';
+  const pols = S.policies.map(p => {
+    const on = p.name === d.policy, busy = p.name === S.switching;
+    return `<button class="pol${on ? ' on' : ''}${busy ? ' busy' : ''}" data-act="self-policy" data-p="${esc(p.name)}" aria-pressed="${on}" ${S.switching || !known() ? 'disabled' : ''}>
+      <span class="n">${esc(p.description || p.name)}</span>${p.description ? `<span class="d">${esc(p.name)}</span>` : ''}</button>`;
+  }).join('');
+  setHTML('route', `<h2>${esc(t('route'))}</h2>
+    <div class="ident"><span>${esc(t('thisDevice'))}</span><span>${esc(t('ip'))} <b class="mono">${esc(ip || '—')}</b></span><span>${esc(t('mac'))} <b class="mono">${esc(known() ? d.mac : t('unknown'))}</b></span></div>
+    ${known() ? '' : `<div class="banner" role="alert">${esc(t('unknownDevice'))}</div>`}
+    <div class="policies" role="group" aria-label="${esc(t('route'))}">${pols}</div>
+    <div class="sub" aria-live="polite" style="margin-top:8px;min-height:1px">${S.switching ? esc(t('switching', { p: policyLabel(S.switching) })) : ''}</div>
+    <label class="opt"><input type="checkbox" data-act="reset-conns" ${S.resetConns ? 'checked' : ''}> <span>${esc(t('resetConns'))}</span></label>`);
+}
 
-  const psk = adminState.psk.trim();
-  const ip = adminState.ip.trim();
+function renderTraffic() {
+  const el = document.getElementById('traffic');
+  el.hidden = !S.device || !!S.loadErr;
+  if (el.hidden) return;
+  let body;
+  if (!S.features.traffic_enabled) body = `<div class="empty">${esc(t('trafficOff'))}</div>`;
+  else if (!known()) body = `<div class="empty">${esc(t('trafficUnknown'))}</div>`;
+  else body = trafficBody(S.traffic, 'self', false);
+  const tz = S.traffic && S.traffic.timezone ? `<span class="badge">${esc(t('tz', { z: S.traffic.timezone }))}</span>` : '';
+  setHTML(el, `<h2><span>${esc(t('traffic'))}</span>${tz}</h2>${body}`);
+}
 
-  if (!psk) {
-    adminState.statusMessage = t('enterPsk');
-    adminState.statusType = 'err';
-    render();
-    return;
-  }
+function devicePolicySelect(d) {
+  const label = t('routeOf', { d: d.ip || d.mac });
+  let opts = S.policies.map(p => `<option value="${esc(p.name)}" ${p.name === d.policy ? 'selected' : ''}>${esc(p.description || p.name)}</option>`).join('');
+  if (!S.policies.some(p => p.name === d.policy)) opts = `<option value="" selected disabled>${esc(policyLabel(d.policy))}</option>` + opts;
+  const dis = !d.ip || S.admin.busy === d.mac;
+  return `<select data-act="admin-policy" data-ip="${esc(d.ip || '')}" data-mac="${esc(d.mac)}" ${dis ? 'disabled' : ''} ${d.ip ? '' : `title="${esc(t('noIp'))}"`} aria-label="${esc(label)}">${opts}</select>`;
+}
 
-  if (!ip) {
-    adminState.statusMessage = t('enterTargetIp');
-    adminState.statusType = 'err';
-    render();
-    return;
-  }
+function deviceRow(d, maxToday, rank, trafficOn) {
+  const tot = (d.today_upload || 0) + (d.today_download || 0);
+  const wd = maxToday ? d.today_download / maxToday * 100 : 0, wu = maxToday ? d.today_upload / maxToday * 100 : 0;
+  const live = (d.download_bps || d.upload_bps) ? ` · ↓ ${rate(d.download_bps)} ↑ ${rate(d.upload_bps)}` : '';
+  const open = S.admin.expanded === d.mac;
+  const me = S.device && S.device.mac === d.mac;
+  const ips = [...(d.ipv4s || []), ...(d.ipv6s || [])].filter(x => x !== d.ip);
+  return `<div class="dev${open ? ' open' : ''}${me ? ' me' : ''}">
+    <div class="who"><div class="ip" data-me="${esc(t('me'))}">${esc(d.ip || d.mac)}</div>
+      <div class="meta">${d.ip ? `<span class="mono">${esc(d.mac)}</span> · ` : ''}${esc(t('lastSeen'))} ${esc(ago(d.last_seen))}${live}</div></div>
+    ${devicePolicySelect(d)}
+    <div class="usage">${rank ? `<span class="rank">${rank}</span>` : ''}${trafficOn ? `<div class="bar" aria-hidden="true"><i class="d" style="width:${wd}%"></i><i class="u" style="width:${wu}%"></i></div>
+      <span>${esc(t('today'))} ${bytes(tot)}</span>` : ''}${trafficOn && d.ip ? `<button class="link" data-act="expand" data-mac="${esc(d.mac)}" data-ip="${esc(d.ip)}" aria-expanded="${open}" aria-label="${esc(t('detailsOf', { d: d.ip }))}">${esc(open ? t('hide') : t('details'))}</button>` : ''}</div>
+    ${open ? `<div class="detail">${ips.length ? `<div class="meta mono" style="margin:4px 0 8px">${ips.map(esc).join(' · ')}</div>` : ''}${trafficBody(S.admin.detail[d.mac], d.mac, true)}</div>` : ''}
+  </div>`;
+}
 
-  adminState.loading = true;
-  adminState.lookupIP = '';
-  adminState.device = null;
-  adminState.statusMessage = t('resolveDeviceStarted') + ip + '...';
-  adminState.statusType = 'info';
-  render();
+function adminDevices() {
+  const list = (S.admin.devices || []).slice();
+  for (const p of Object.values(S.admin.pinned)) if (!list.some(d => d.mac === p.mac)) list.unshift(p);
+  return list;
+}
 
-  try {
-    const res = await fetch('/api/admin/device?ip=' + encodeURIComponent(ip), {
-      headers: {'X-WLT-PSK': psk}
-    });
-    const data = await readJSON(res);
-    if (!res.ok) throw new Error((data && data.error) || 'Failed to resolve device');
-    adminState.lookupIP = ip;
-    adminState.device = data;
-    adminState.trafficData = null;
-    adminState.statusMessage = t('deviceResolved') + ip;
-    adminState.statusType = 'ok';
-
-    const trafficRes = await fetch('/api/admin/traffic?ip=' + encodeURIComponent(ip), {
-      headers: {'X-WLT-PSK': psk}
-    });
-    if (trafficRes.ok) {
-      adminState.trafficData = await trafficRes.json();
+function renderAdminList() {
+  const A = S.admin, el = document.getElementById('admin-list');
+  if (!el) return;
+  // Never rebuild under an open <select>; rebuild when it loses focus.
+  const ae = document.activeElement;
+  if (ae && ae.tagName === 'SELECT' && el.contains(ae)) { A.listPending = true; return; }
+  A.listPending = false;
+  let html;
+  if (A.tab === 'devices') {
+    const trafficOn = !!S.features.traffic_enabled && A.trafficAvail;
+    if (A.devices == null) html = '<div class="skeleton"></div><div class="skeleton"></div>';
+    else {
+      const all = adminDevices();
+      const q = A.q.trim().toLowerCase();
+      const list = all.filter(d => !q || [d.ip, d.mac, d.policy, policyLabel(d.policy), ...(d.ipv4s || []), ...(d.ipv6s || [])].join(' ').toLowerCase().includes(q));
+      const max = Math.max(0, ...all.map(d => (d.today_upload || 0) + (d.today_download || 0)));
+      html = (S.features.traffic_enabled && !A.trafficAvail ? `<div class="banner warn">${esc(t('adminTrafficDown'))}</div>` : '') +
+        (list.length ? list.map(d => deviceRow(d, max, q ? 0 : all.indexOf(d) + 1, trafficOn)).join('') : `<div class="empty">${esc(q ? t('noMatch') : t('noDevices'))}</div>`);
+      const qt = A.q.trim();
+      if (qt && looksLikeIP(qt) && !all.some(d => d.ip === qt || (d.ipv4s || []).includes(qt) || (d.ipv6s || []).includes(qt))) {
+        html += `<div class="lookup"><span>${esc(t('noMatch'))}</span><button class="btn" data-act="lookup" data-ip="${esc(qt)}">${esc(t('lookupOnRouter', { ip: qt }))}</button></div>`;
+      }
+      html += `<div class="sub" style="margin-top:8px">${esc(t('resetNote'))}</div>`;
     }
-  } catch (e) {
-    adminState.statusMessage = t('error') + e.message;
-    adminState.statusType = 'err';
-  } finally {
-    adminState.loading = false;
-    render();
+  } else {
+    const r = A.rank;
+    const max = r && r.length ? r[0].total : 0;
+    html = r == null ? '<div class="skeleton"></div><div class="skeleton"></div>' : !r.length ? `<div class="empty">${esc(t('noData'))}</div>` :
+      r.map((e, i) => {
+        const d = Object.assign({}, (S.admin.devices || []).find(x => x.mac === e.mac) || {}, { mac: e.mac, ip: e.ip, policy: e.policy });
+        const me = S.device && S.device.mac === e.mac;
+        return `<div class="dev${me ? ' me' : ''}"><div class="who"><div class="ip" data-me="${esc(t('me'))}">${esc(e.ip || e.mac)}</div>
+          <div class="meta">${e.ip ? `<span class="mono">${esc(e.mac)}</span>` : ''}${(e.download_bps || e.upload_bps) ? `${e.ip ? ' · ' : ''}↓ ${rate(e.download_bps)} ↑ ${rate(e.upload_bps)}` : ''}</div></div>
+          ${devicePolicySelect(d)}
+          <div class="usage"><span class="rank">${i + 1}</span><div class="bar" aria-hidden="true"><i class="d" style="width:${max ? e.download / max * 100 : 0}%"></i><i class="u" style="width:${max ? e.upload / max * 100 : 0}%"></i></div>
+          <span><b>${bytes(e.total)}</b> · ↓ ${bytes(e.download)} · ↑ ${bytes(e.upload)}</span></div></div>`;
+      }).join('');
   }
+  setHTML(el, html);
 }
 
-function setTopKWindow(win) {
-  adminState.topKWindow = win;
-  render();
-}
-
-async function fetchTopK() {
-  const psk = adminState.psk.trim();
-  if (!psk) {
-    adminState.statusMessage = t('enterPsk');
-    adminState.statusType = 'err';
-    render();
+function renderAdmin() {
+  const el = document.getElementById('admin');
+  el.hidden = !S.features.admin_enabled || !!S.loadErr;
+  if (el.hidden) return;
+  const A = S.admin;
+  if (!A.open) {
+    setHTML(el, `<h2>${esc(t('admin'))}</h2>
+      <form class="row" data-act="unlock"><input class="input" type="password" name="psk" autocomplete="current-password" placeholder="${esc(t('psk'))}" aria-label="${esc(t('psk'))}" ${A.unlocking ? 'disabled' : ''}>
+      <button class="btn primary" type="submit" ${A.unlocking ? 'disabled' : ''}>${esc(A.unlocking ? t('unlocking') : t('unlock'))}</button></form>
+      <div class="sub" style="margin-top:8px">${esc(t('adminHint'))}</div>`);
     return;
   }
-  adminState.loading = true;
-  adminState.statusMessage = t('loading') + '...';
-  adminState.statusType = 'info';
-  render();
+  const tab = (id, label) => `<button role="tab" data-act="tab" data-tab="${id}" aria-selected="${A.tab === id}">${esc(t(label))}</button>`;
+  const tabs = `<div class="tabs" role="tablist">${tab('devices', 'devices')}${S.features.traffic_enabled ? tab('ranking', 'ranking') : ''}</div>`;
+  let controls;
+  if (A.tab === 'devices') {
+    controls = `<div class="row"><input class="input" type="search" data-act="search" value="${esc(A.q)}" placeholder="${esc(t('search'))}" aria-label="${esc(t('search'))}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>`;
+  } else {
+    const wins = [['today', 'today'], ['yesterday', 'yesterday'], ['7days', 'week'], ['30days', 'd30'], ['month', 'month'], ['lastmonth', 'lastmonth']];
+    controls = `<div class="row"><select class="input" data-act="rank-win" aria-label="${esc(t('windowLabel'))}" style="flex:0 0 auto">${wins.map(([v, k]) => `<option value="${v}" ${A.rankWin === v ? 'selected' : ''}>${esc(t(k))}</option>`).join('')}</select></div>`;
+  }
+  // The shell (tabs + inputs) is rebuilt only when its structure changes.
+  const shellKey = [S.lang, A.tab, S.features.traffic_enabled].join('|');
+  if (el.dataset.shell !== shellKey) {
+    el.dataset.shell = shellKey;
+    el.innerHTML = `<h2><span>${esc(t('admin'))}</span><span class="row">${tabs}<button class="btn" data-act="lock">${esc(t('lock'))}</button></span></h2>${controls}<div class="list" id="admin-list" role="tabpanel"></div>`;
+  }
+  renderAdminList();
+}
+
+function renderChrome() {
+  document.documentElement.lang = S.lang;
+  document.title = t('brand');
+  document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
+  const lang = document.getElementById('lang');
+  lang.setAttribute('aria-label', t('language'));
+  setHTML(lang, LANGS.map(([c, l, full]) => `<button data-act="lang" data-lang="${c}" lang="${c}" class="${S.lang === c ? 'on' : ''}" aria-pressed="${S.lang === c}" aria-label="${full}">${l}</button>`).join(''));
+}
+
+function renderAll() {
+  renderChrome();
+  renderRoute();
+  renderTraffic();
+  const a = document.getElementById('admin');
+  if (!S.admin.open) delete a.dataset.shell;
+  renderAdmin();
+}
+
+// ---------- data ----------
+
+async function loadSelf() {
+  S.loadErr = '';
   try {
-    const url = '/api/admin/topk-traffic?window=' + encodeURIComponent(adminState.topKWindow || 'today');
-    const res = await fetch(url, {
-      headers: {'X-WLT-PSK': psk}
-    });
-    if (res.ok) {
-      adminState.topKData = await res.json();
-    } else {
-      adminState.topKData = [];
+    const [dev, pols, feats] = await Promise.all([api('/api/device'), api('/api/policies'), api('/api/features')]);
+    S.device = dev; S.policies = pols || []; S.features = feats || {};
+  } catch (e) {
+    S.loadErr = e.message;
+  }
+  renderAll();
+  loadTraffic();
+  if (S.features.admin_enabled && S.admin.psk) unlock(S.admin.psk, true);
+}
+
+async function refreshDevice() {
+  if (S.switching) return;
+  try { const d = await api('/api/device'); if (!S.switching) { S.device = d; renderRoute(); } } catch (e) {}
+}
+
+async function loadTraffic() {
+  if (!S.features.traffic_enabled || !known()) return;
+  try { S.traffic = await api('/api/traffic'); } catch (e) { S.traffic = { available: false, error: e.message }; }
+  renderTraffic();
+}
+
+async function loadDevices() {
+  try {
+    const r = await adminApi('/api/admin/devices');
+    S.admin.devices = r.devices || [];
+    S.admin.trafficAvail = r.traffic_available !== false;
+    for (const mac of Object.keys(S.admin.pinned)) if (S.admin.devices.some(d => d.mac === mac)) delete S.admin.pinned[mac];
+    return true;
+  } catch (e) {
+    if (e.status === 401) { adminFail(); return false; }
+    toast(t('failed') + e.message, true);
+    return true;
+  } finally {
+    renderAdminList();
+  }
+}
+
+async function loadRank() {
+  const seq = ++S.admin.rankSeq, win = S.admin.rankWin;
+  try {
+    const r = await adminApi('/api/admin/topk-traffic?k=20&window=' + encodeURIComponent(win));
+    if (seq === S.admin.rankSeq) S.admin.rank = r;
+  } catch (e) {
+    if (e.status === 401) return adminFail();
+    if (seq === S.admin.rankSeq) { S.admin.rank = []; toast(t('failed') + e.message, true); }
+  }
+  renderAdminList();
+}
+
+async function loadDetail(mac, ip) {
+  try { S.admin.detail[mac] = await adminApi('/api/admin/traffic?ip=' + encodeURIComponent(ip)); }
+  catch (e) {
+    if (e.status === 401) return adminFail();
+    S.admin.detail[mac] = { available: false, error: e.message };
+  }
+  renderAdminList();
+}
+
+function adminFail(silent) {
+  Object.assign(S.admin, { open: false, unlocking: false, psk: '', devices: null, rank: null });
+  store('wlt-psk');
+  if (!silent) toast(t('badPsk'), true);
+  renderAll();
+}
+
+async function unlock(psk, silent) {
+  S.admin.psk = psk; S.admin.unlocking = true;
+  renderAdmin();
+  try {
+    const r = await adminApi('/api/admin/devices');
+    Object.assign(S.admin, { open: true, unlocking: false, devices: r.devices || [], trafficAvail: r.traffic_available !== false });
+    store('wlt-psk', psk);
+    renderAll();
+  } catch (e) {
+    if (e.status === 401) return adminFail(silent);
+    S.admin.unlocking = false;
+    renderAdmin();
+    if (!silent) toast(t('failed') + e.message, true);
+  }
+}
+
+async function setSelfPolicy(name) {
+  if (S.switching || !S.device || name === S.device.policy) return;
+  S.switching = name; renderRoute();
+  try {
+    S.device = await api('/api/policy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ policy: name, flush_conntrack: S.resetConns }) });
+    toast(t('switched', { p: policyLabel(name) }));
+  } catch (e) { toast(t('failed') + e.message, true); }
+  S.switching = ''; renderRoute();
+  if (S.admin.open) loadDevices();
+}
+
+async function setAdminPolicy(sel) {
+  const { ip, mac } = sel.dataset, policy = sel.value;
+  const all = adminDevices(), d = all.find(d => d.mac === mac);
+  const before = d ? d.policy : '';
+  S.admin.busy = mac;
+  sel.disabled = true;
+  try {
+    await adminApi('/api/admin/policy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ip, policy, flush_conntrack: true }) });
+    if (d) d.policy = policy;
+    (S.admin.rank || []).forEach(e => { if (e.mac === mac) e.policy = policy; });
+    if (S.device && S.device.mac === mac) { S.device.policy = policy; renderRoute(); }
+    toast(t('switched', { p: policyLabel(policy) }));
+  } catch (e) {
+    if (e.status === 401) return adminFail();
+    sel.value = before;
+    toast(t('failed') + e.message, true);
+  }
+  S.admin.busy = '';
+  sel.blur();
+  renderAdminList();
+}
+
+async function lookupIP(ip) {
+  try {
+    const d = await adminApi('/api/admin/device?ip=' + encodeURIComponent(ip));
+    if (!adminDevices().some(x => x.mac === d.mac)) {
+      S.admin.pinned[d.mac] = { mac: d.mac, ip, ipv4s: d.ipv4s || [], ipv6s: d.ipv6s || [], policy: d.policy, last_seen: '', today_upload: 0, today_download: 0 };
     }
-    adminState.statusMessage = t('done');
-    adminState.statusType = 'ok';
-  } catch (e) {
-    adminState.topKData = [];
-    adminState.statusMessage = t('error') + e.message;
-    adminState.statusType = 'err';
-  } finally {
-    adminState.loading = false;
-    render();
+    renderAdminList();
+  } catch (err) {
+    if (err.status === 401) return adminFail();
+    toast(t('failed') + err.message, true);
   }
 }
 
-async function setAdminPolicy(name) {
-  if (adminState.loading || adminState.applying) return;
-  if (!adminEnabled) {
-    adminState.statusMessage = t('adminManagementDisabled');
-    adminState.statusType = 'err';
-    render();
-    return;
-  }
-  const psk = adminState.psk.trim();
-  if (!adminState.lookupIP || !adminState.device) {
-    adminState.statusMessage = t('resolveFirstDevice');
-    adminState.statusType = 'err';
-    render();
-    return;
-  }
-  if (!psk) {
-    adminState.statusMessage = t('enterPskForAdmin');
-    adminState.statusType = 'err';
-    render();
-    return;
-  }
-  if (adminState.device.policy === name) return;
+// ---------- events ----------
 
-  adminState.applying = true;
-  adminState.statusMessage = t('applyRemotePolicy') + name + '...';
-  adminState.statusType = 'info';
-  render();
-
-  try {
-    const res = await fetch('/api/admin/policy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-WLT-PSK': psk
-      },
-      body: JSON.stringify({
-        policy: name,
-        ip: adminState.lookupIP,
-        flush_conntrack: adminState.flushConntrack
-      })
-    });
-    const data = await readJSON(res);
-    if (!res.ok) throw new Error((data && data.error) || 'Failed');
-    adminState.device = data;
-    adminState.statusMessage = t('remotePolicySetTo') + name;
-    adminState.statusType = 'ok';
-  } catch (e) {
-    adminState.statusMessage = t('error') + e.message;
-    adminState.statusType = 'err';
-  } finally {
-    adminState.applying = false;
-    render();
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const a = el.dataset.act;
+  if (a === 'lang') { S.lang = el.dataset.lang; pref('wlt-lang', S.lang); renderAll(); }
+  else if (a === 'retry') loadSelf();
+  else if (a === 'self-policy') setSelfPolicy(el.dataset.p);
+  else if (a === 'tab') { S.admin.tab = el.dataset.tab; renderAdmin(); if (S.admin.tab === 'ranking') loadRank(); else loadDevices(); }
+  else if (a === 'lock') { Object.assign(S.admin, { open: false, psk: '', devices: null, rank: null, pinned: {} }); store('wlt-psk'); renderAll(); }
+  else if (a === 'lookup') lookupIP(el.dataset.ip);
+  else if (a === 'pick') {
+    const k = el.dataset.key, i = Number(el.dataset.i);
+    S.chartPick[k] = S.chartPick[k] === i ? null : i;
+    if (k === 'self') renderTraffic(); else renderAdminList();
+  } else if (a === 'expand') {
+    const mac = el.dataset.mac;
+    S.admin.expanded = S.admin.expanded === mac ? '' : mac;
+    renderAdminList();
+    if (S.admin.expanded) loadDetail(mac, el.dataset.ip);
   }
+});
+document.addEventListener('change', e => {
+  const a = e.target.dataset && e.target.dataset.act;
+  if (a === 'reset-conns') S.resetConns = e.target.checked;
+  else if (a === 'admin-policy') setAdminPolicy(e.target);
+  else if (a === 'rank-win') { S.admin.rankWin = e.target.value; S.admin.rank = null; renderAdminList(); loadRank(); }
+});
+document.addEventListener('input', e => {
+  if (e.target.dataset && e.target.dataset.act === 'search') { S.admin.q = e.target.value; renderAdminList(); }
+});
+document.addEventListener('focusout', e => {
+  if (e.target.tagName === 'SELECT') setTimeout(() => { if (S.admin.listPending) renderAdminList(); }, 0);
+});
+document.addEventListener('submit', e => {
+  const f = e.target;
+  if (f.dataset.act !== 'unlock') return;
+  e.preventDefault();
+  if (f.psk.value) unlock(f.psk.value, false);
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { refreshDevice(); tick(); } });
+
+function tick() {
+  if (document.hidden) return;
+  loadTraffic();
+  if (!S.admin.open) return;
+  if (S.admin.tab === 'devices') {
+    if (!S.admin.busy) loadDevices();
+    if (S.admin.expanded) {
+      const d = adminDevices().find(d => d.mac === S.admin.expanded);
+      if (d && d.ip) loadDetail(d.mac, d.ip);
+    }
+  } else loadRank();
 }
+setInterval(tick, 10000);
+setInterval(() => { if (!document.hidden) refreshDevice(); }, 60000);
 
-detectLanguage();
-load();
+(function init() {
+  const saved = pref('wlt-lang');
+  const navs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en']).map(l => l.toLowerCase());
+  const nav = navs.map(l => l.slice(0, 2)).find(l => I18N[l]);
+  S.lang = I18N[saved] ? saved : nav || 'en';
+  S.admin.psk = load('wlt-psk');
+  renderChrome();
+  loadSelf();
+})();
 </script>
 </body>
 </html>

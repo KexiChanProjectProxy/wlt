@@ -105,10 +105,10 @@ wlt/
 | `lan_interfaces` | []string | 需要挂载 ingress 钩子的 LAN 接口列表，**不能为空** |
 | `create_table` | bool | 表不存在时是否自动创建 |
 | `chain_priority` | int32 | chain 优先级，`-150` 在 conntrack 之前 |
-| `cleanup_on_exit` | bool | 退出时是否清空 set 元素（恢复无标记状态） |
+| `cleanup_on_exit` | bool | 退出时清理：`create_table` 为 true 时删除整张表，否则只清空 set 元素 |
 | `state_path` | string | 设备策略状态文件路径 |
 | `admin_psk` | string | 管理接口使用的预共享密钥，请通过 `X-WLT-PSK` 请求头传入。为空时管理接口禁用 |
-| `traffic_api_url` | string | traffic-count 服务 API 地址（用于流量统计展示），如 `http://127.0.0.1:8081`。为空时流量统计功能禁用 |
+| `traffic_api_url` | string | traffic-count 服务 API 地址（用于流量统计展示），如 `http://127.0.0.1:8081`，需与 traffic-count 的 `bind_address` 一致。为空时流量统计功能禁用 |
 | `default_policy` | string | 新设备首次访问时自动分配的策略名 |
 | `policies` | []Policy | 策略列表，见下表 |
 
@@ -197,7 +197,8 @@ wlt/
 | `GET` | `/api/admin/device?ip=...` | 按 IP 查询指定设备的信息和策略 |
 | `POST` | `/api/admin/policy` | 为指定设备设置策略 |
 | `GET` | `/api/admin/traffic?ip=...` | 按 IP 查询指定设备的流量统计 |
-| `GET` | `/api/admin/topk-traffic?window=...` | 查询流量排行最高的 K 个设备 |
+| `GET` | `/api/admin/topk-traffic?window=...&k=10` | 流量排行（window：today/yesterday/7days/30days/month/lastmonth） |
+| `GET` | `/api/admin/devices` | 所有已知设备及其策略、今日流量、实时速率 |
 
 ### 流量统计接口
 
@@ -209,22 +210,23 @@ wlt/
 
 #### GET /api/traffic
 
-响应示例：
-
 ```json
 {
-  "today": {"upload": 1234567, "download": 9876543, "total": 11111110},
-  "week": {"upload": 8765432, "download": 6543210, "total": 15308642},
-  "month": {"upload": 34567890, "download": 23456789, "total": 58024679}
+  "available": true,
+  "today": {"upload": 3259414, "download": 30261558, "total": 33520972},
+  "yesterday": {"upload": 0, "download": 0, "total": 0},
+  "week": {"upload": 3259414, "download": 30261558, "total": 33520972},
+  "month": {"upload": 3259414, "download": 30261558, "total": 33520972},
+  "last_month": {"upload": 0, "download": 0, "total": 0},
+  "series": [{"date": "2026-11-23", "upload": 3259414, "download": 30261558}],
+  "live": {"upload_bps": 113918, "download_bps": 113918},
+  "timezone": "Asia/Shanghai"
 }
 ```
 
-字段说明：
-- `upload`：出站字节数（从设备发出）
-- `download`：入站字节数（设备接收）
-- `total`：合计字节数
-
-当 `traffic_api_url` 为空或 traffic-count 服务不可用时，返回全零数据。
+- `upload`：设备发出的字节数；`download`：设备接收的字节数
+- `week` 为近 7 天（含今天），`series` 为近 14 天按天数据，`live` 为最近一个采样周期的速率（字节/秒）
+- traffic-count 不可用时 `available` 为 false，并在 `error` 中说明原因
 
 查询指定 IP 的设备：
 
@@ -360,6 +362,10 @@ wlt 会将请求转发到 wlt-traffic 的 `GET /api/v1/traffic` 接口，按 MAC
 ## 注意事项
 
 - 守护进程必须与 Web UI 访问者处于**同一个二层网络**（同一广播域），否则无法通过邻居表查到访问设备的 MAC。
-- 若 `lan_interfaces` 中的接口不存在，nftables 创建 chain 时会报错，进程启动失败。
+- 若 `lan_interfaces` 中的接口暂不存在，会跳过该接口并在其出现后自动创建 chain，不影响其他接口。
+
+## 规则自愈
+
+wlt 通过 netlink 订阅 nftables 变更与网卡变更，任何导致 wlt 表偏离期望状态的操作（`nft flush ruleset` 后重新 `nft -f /etc/nftables.conf`、手动删除规则/元素、`flush set`、LAN 网桥被删除重建等）都会在约 0.3 秒内被修复，且**会从状态文件恢复所有设备 MAC**。修复以单个原子事务提交；没有偏差时不做任何写入。另有每分钟一次的兜底检查。
 - `chain_priority: -150` 早于 conntrack（优先级 -100），适合大多数场景。如与其他防火墙规则冲突可调整。
 - 状态文件中保存的 IPv4/IPv6 列表仅用于 Web UI 展示，nftables 规则只依赖 MAC，因此 IP 地址变化不影响流量标记。
