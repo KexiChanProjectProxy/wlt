@@ -61,8 +61,14 @@ wlt/
 ├── config.go        # Config 结构体、配置加载与校验
 ├── state.go         # 设备状态持久化（JSON，原子写入）
 ├── device.go        # IP/MAC 解析，查询内核邻居表
+├── discovery.go     # 被动邻居发现（只读 ARP/NDP，不做端口扫描）
 ├── nft.go           # nftables 管理：set、rule、标记操作
 ├── server.go        # HTTP 服务：API 与 Web UI
+├── traffic.go       # 流量 API 客户端 / UI 数据模型
+├── traffic_agg.go   # 内置流量聚合器（router API + Clash + 可选 WG 计数器）
+├── probe/
+│   ├── traffic.c    # 小型 tc/eBPF per-MAC 探针（路由器侧）
+│   └── README.md    # 探针构建与部署说明
 ├── web/
 │   └── index.html   # 内嵌 SPA（无外部依赖）
 └── config.json      # 示例配置
@@ -86,6 +92,16 @@ wlt/
   "state_path": "/var/lib/wlt/state.json",
   "admin_psk": "change-me-to-a-long-random-string",
   "traffic_api_url": "http://127.0.0.1:8081",
+  "traffic_listen": "127.0.0.1:8081",
+  "traffic_router_url": "http://192.168.1.1:18081",
+  "traffic_clash_url": "http://127.0.0.1:9090",
+  "traffic_state_path": "/var/lib/wlt/traffic-state.json",
+  "traffic_lan_interface": "eth0",
+  "traffic_wg_interface": "",
+  "traffic_wg4_cidrs": [],
+  "traffic_wg6_cidrs": [],
+  "traffic_account_table": "wlt_acct",
+  "discovery_interval_seconds": 60,
   "default_policy": "direct",
   "policies": [
     {"name": "direct", "mark": 1, "description": "直接连接"},
@@ -108,8 +124,18 @@ wlt/
 | `cleanup_on_exit` | bool | 退出时清理：`create_table` 为 true 时删除整张表，否则只清空 set 元素 |
 | `state_path` | string | 设备策略状态文件路径 |
 | `admin_psk` | string | 管理接口使用的预共享密钥，请通过 `X-WLT-PSK` 请求头传入。为空时管理接口禁用 |
-| `traffic_api_url` | string | traffic-count 服务 API 地址（用于流量统计展示），如 `http://127.0.0.1:8081`，需与 traffic-count 的 `bind_address` 一致。为空时流量统计功能禁用 |
-| `default_policy` | string | 新设备首次访问时自动分配的策略名 |
+| `traffic_api_url` | string | 流量 API 地址；默认指向内置聚合器的 `http://127.0.0.1:8081`。为空时流量统计功能禁用 |
+| `traffic_listen` | string | 内置聚合器监听地址，默认 `127.0.0.1:8081`（仅回环） |
+| `traffic_router_url` | string | 路由器侧 traffic-count/eBPF 探针 API 地址，如 `http://192.168.1.1:18081` |
+| `traffic_clash_url` | string | 本机 Clash API 地址，默认 `http://127.0.0.1:9090` |
+| `traffic_state_path` | string | 内置聚合器的当日分类计数状态文件 |
+| `traffic_lan_interface` | string | 统计 WG 上传的 LAN 接口；留空则关闭 nft WG 计数 |
+| `traffic_wg_interface` | string | WireGuard 接口；与 `traffic_wg4_cidrs`/`traffic_wg6_cidrs` 一起启用 WG 分类 |
+| `traffic_wg4_cidrs` | []string | WG IPv4 目的网段（例如 `192.168.59.0/24`）；不在代码中写死 |
+| `traffic_wg6_cidrs` | []string | WG IPv6 目的网段 |
+| `traffic_account_table` | string | WG 计数 nftables 表名，默认 `wlt_acct` |
+| `discovery_interval_seconds` | int | 被动邻居发现间隔，默认 60 秒；只读邻居表，不主动扫描 |
+| `default_policy` | string | 新设备首次访问或被动发现时分配的策略名 |
 | `policies` | []Policy | 策略列表，见下表 |
 
 ### Policy 字段
@@ -202,7 +228,7 @@ wlt/
 
 ### 流量统计接口
 
-启用流量统计需要部署 [wlt-traffic](https://github.com/KexiChanProjectProxy/wlt-traffic) 服务，并在配置中设置 `traffic_api_url`。
+流量统计由 wlt 内置聚合器提供（默认 `traffic_api_url` 指向 `http://127.0.0.1:8081`）；路由器侧 eBPF 探针通过 `traffic_router_url` 接入，详见下文。
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -313,49 +339,61 @@ ip route add default via 192.168.1.1 table 200
 
 ---
 
-## 流量统计（可选）
+## 设备发现与流量统计（内置）
 
-wlt 支持通过集成 [wlt-traffic](https://github.com/KexiChanProjectProxy/wlt-traffic) 服务显示设备流量使用情况。
+wlt 现在内置了设备发现和流量聚合，不再需要 `wlt-discover.py`、`wlt-traffic-pi.py` 或额外的流量守护进程。
 
-### 架构
+### 被动设备发现
+
+`discovery.go` 每 `discovery_interval_seconds` 秒读取一次内核 ARP/NDP 邻居表，只做只读邻居查询：
+
+- 不发送 ARP 探测、不建立 TCP 连接、不做端口扫描；
+- 新 MAC 以 `default_policy` 加入状态并同步到 nftables；
+- 已有设备的策略保持不变，只合并新看到的 IP。
+
+### 流量聚合
+
+`traffic_agg.go` 在 wlt 进程内监听 `traffic_listen`（默认仅 `127.0.0.1:8081`）并实现原来的 traffic-count API，数据源可配置：
 
 ```
-wlt Web UI (port 8080)
-       │
-       │ /api/traffic
-       ▼
-wlt server.go ──────► wlt-traffic API (127.0.0.1:8081)
-                            │
-                            ▼
-                       SQLite 数据库
-                       (/var/lib/traffic-count/traffic-count.db)
+wlt Web UI :8080
+      │
+      ▼
+内置聚合器 127.0.0.1:8081
+      ├── traffic_router_url  路由器侧 eBPF/traffic-count API（每台设备的直连总量）
+      ├── traffic_clash_url   本机 Clash API（sing-box 每条连接的字节数）
+      └── traffic_account_table nftables WG 计数器（可选的 WG 分类）
 ```
 
-wlt 本身不采集流量数据，只是代理到 wlt-traffic 服务查询，并以 MB/GB 等人类可读格式在 Web UI 中展示。
+分类口径与 UI 一致：`singbox`、`direct`、`wg`。`traffic_api_url` 默认指向内置聚合器，仍可覆盖为外部兼容 API。
 
-### 部署 wlt-traffic
+### 小型 eBPF 探针
 
-参考 [wlt-traffic 文档](https://github.com/KexiChanProjectProxy/wlt-traffic)。
+路由器侧提供一个小型 tc/eBPF per-MAC 探针源码：`probe/traffic.c`。它按 LAN 接口的源/目的 MAC 统计上传/下载，编译与部署说明见 `probe/README.md`。探针 API 通过 `traffic_router_url` 接入 wlt；wlt 自身不要求 clang/libbpf，普通 `go build` 即可。
 
-### 配置 wlt
-
-在 wlt 的 `config.json` 中添加 `traffic_api_url`：
+### 配置要点
 
 ```json
 {
-  "listen": ":8080",
-  "traffic_api_url": "http://127.0.0.1:8081",
-  ...
+  "traffic_listen": "127.0.0.1:8081",
+  "traffic_router_url": "http://192.168.1.1:18081",
+  "traffic_clash_url": "http://127.0.0.1:9090",
+  "traffic_lan_interface": "eth0",
+  "traffic_wg_interface": "",
+  "traffic_wg4_cidrs": [],
+  "traffic_wg6_cidrs": [],
+  "traffic_account_table": "wlt_acct",
+  "discovery_interval_seconds": 60
 }
 ```
 
-wlt 会将请求转发到 wlt-traffic 的 `GET /api/v1/traffic` 接口，按 MAC 聚合今日/本周/本月的入站/出站流量。
+接口名、网段、表名全部来自配置，代码中不写死具体 WireGuard 名称或网段。`traffic_wg_interface` 为空时不启用 WG 计数器。
 
 ### 注意事项
 
-- wlt-traffic 必须与 wlt 部署在同一台机器上（仅监听 localhost）
-- wlt 对 traffic-count API 调用有 5 秒超时，服务不可用时 Web UI 显示为零而不报错
-- wlt 不管理 wlt-traffic 的生命周期，需要独立部署和运维
+- 内置聚合器只监听回环地址；不要暴露到 LAN。
+- 路由器侧 eBPF 探针仍需能看到 LAN 的原始 MAC（通常部署在路由器/LAN 网桥上）。
+- 设备发现是**被动**的：完全空闲且从未在邻居表中出现过的设备不会被主动探测出来；这是为了不做端口扫描。
 
 ---
 

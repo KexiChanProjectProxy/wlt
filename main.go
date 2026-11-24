@@ -74,6 +74,18 @@ func run() error {
 
 	// Start HTTP server
 	srv := NewServer(cfg, state, nft)
+
+	// Passive neighbour discovery and the built-in traffic aggregator run in
+	// this process; there is no separate Python helper or systemd timer.
+	discoveryCtx, discoveryCancel := context.WithCancel(context.Background())
+	defer discoveryCancel()
+	go srv.StartDiscovery(discoveryCtx)
+
+	aggCtx, aggCancel := context.WithCancel(context.Background())
+	defer aggCancel()
+	agg := NewTrafficAgg(cfg, state)
+	go agg.Start(aggCtx)
+
 	httpSrv := &http.Server{
 		Addr:         cfg.Listen,
 		Handler:      srv,

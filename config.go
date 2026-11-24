@@ -25,6 +25,20 @@ type Config struct {
 	DefaultPolicy string   `json:"default_policy"`
 	Policies      []Policy `json:"policies"`
 	TrafficAPIURL string   `json:"traffic_api_url"`
+
+	// Built-in traffic aggregator and passive discovery.  The aggregator
+	// listens on loopback only and keeps the old traffic-count API shape so
+	// the embedded UI does not need a second process.
+	TrafficListen            string   `json:"traffic_listen"`
+	TrafficRouterURL         string   `json:"traffic_router_url"`
+	TrafficClashURL          string   `json:"traffic_clash_url"`
+	TrafficStatePath         string   `json:"traffic_state_path"`
+	TrafficLanInterface      string   `json:"traffic_lan_interface"`
+	TrafficWGInterface       string   `json:"traffic_wg_interface"`
+	TrafficWG4CIDRs          []string `json:"traffic_wg4_cidrs"`
+	TrafficWG6CIDRs          []string `json:"traffic_wg6_cidrs"`
+	TrafficAccountTable      string   `json:"traffic_account_table"`
+	DiscoveryIntervalSeconds int      `json:"discovery_interval_seconds"`
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -38,12 +52,37 @@ func LoadConfig(path string) (*Config, error) {
 	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
 		return nil, fmt.Errorf("decode config: %w", err)
 	}
+	cfg.applyDefaults()
 
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
 	return &cfg, nil
+}
+
+func (c *Config) applyDefaults() {
+	if c.TrafficListen == "" {
+		c.TrafficListen = "127.0.0.1:8081"
+	}
+	if c.TrafficAPIURL == "" {
+		c.TrafficAPIURL = "http://127.0.0.1:8081"
+	}
+	if c.TrafficRouterURL == "" {
+		c.TrafficRouterURL = "http://192.168.31.1:18081"
+	}
+	if c.TrafficClashURL == "" {
+		c.TrafficClashURL = "http://127.0.0.1:9090"
+	}
+	if c.TrafficStatePath == "" {
+		c.TrafficStatePath = "/var/lib/wlt/traffic-state.json"
+	}
+	if c.TrafficAccountTable == "" {
+		c.TrafficAccountTable = "wlt_acct"
+	}
+	if c.DiscoveryIntervalSeconds <= 0 {
+		c.DiscoveryIntervalSeconds = 60
+	}
 }
 
 func (c *Config) Validate() error {

@@ -32,16 +32,17 @@ type liveRate struct {
 }
 
 type trafficResponse struct {
-	Available bool               `json:"available"`
-	Error     string             `json:"error,omitempty"`
-	Today     trafficWindowStats `json:"today"`
-	Yesterday trafficWindowStats `json:"yesterday"`
-	Week      trafficWindowStats `json:"week"`
-	Month     trafficWindowStats `json:"month"`
-	LastMonth trafficWindowStats `json:"last_month"`
-	Series    []trafficDay       `json:"series"`
-	Live      liveRate           `json:"live"`
-	Timezone  string             `json:"timezone,omitempty"`
+	Available  bool                          `json:"available"`
+	Error      string                        `json:"error,omitempty"`
+	Today      trafficWindowStats            `json:"today"`
+	Yesterday  trafficWindowStats            `json:"yesterday"`
+	Week       trafficWindowStats            `json:"week"`
+	Month      trafficWindowStats            `json:"month"`
+	LastMonth  trafficWindowStats            `json:"last_month"`
+	Series     []trafficDay                  `json:"series"`
+	Live       liveRate                      `json:"live"`
+	Categories map[string]trafficWindowStats `json:"categories,omitempty"`
+	Timezone   string                        `json:"timezone,omitempty"`
 }
 
 func (s *Server) trafficGet(ctx context.Context, path string, q url.Values, out any) error {
@@ -81,9 +82,10 @@ func (w apiWindow) stats() trafficWindowStats {
 func (s *Server) fetchDeviceTraffic(ctx context.Context, mac string) trafficResponse {
 	out := trafficResponse{Series: []trafficDay{}}
 	var sum struct {
-		Timezone string               `json:"timezone"`
-		Windows  map[string]apiWindow `json:"windows"`
-		Live     *struct {
+		Timezone   string                        `json:"timezone"`
+		Windows    map[string]apiWindow          `json:"windows"`
+		Categories map[string]trafficWindowStats `json:"categories"`
+		Live       *struct {
 			UploadBps   uint64 `json:"upload_bps"`
 			DownloadBps uint64 `json:"download_bps"`
 		} `json:"live"`
@@ -94,6 +96,7 @@ func (s *Server) fetchDeviceTraffic(ctx context.Context, mac string) trafficResp
 	}
 	out.Available = true
 	out.Timezone = sum.Timezone
+	out.Categories = sum.Categories
 	out.Today = sum.Windows["today"].stats()
 	out.Yesterday = sum.Windows["yesterday"].stats()
 	out.Week = sum.Windows["7days"].stats()
@@ -331,6 +334,7 @@ func (s *Server) handleAdminTopKTraffic(w http.ResponseWriter, r *http.Request) 
 type adminDeviceEntry struct {
 	MAC         string    `json:"mac"`
 	IP          string    `json:"ip"`
+	Name        string    `json:"name,omitempty"`
 	IPv4s       []string  `json:"ipv4s"`
 	IPv6s       []string  `json:"ipv6s"`
 	Policy      string    `json:"policy"`
@@ -348,27 +352,37 @@ func (s *Server) handleAdminDevices(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	// Device/policy sync polls this endpoint every 0.5s with traffic=0 and must
+	// never wait for the (sometimes slow) traffic database.  UI requests still
+	// include usage and get a generous timeout.
+	noTraffic := r.URL.Query().Get("traffic") == "0"
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
 	today := map[string]apiRecord{}
 	trafficOK := false
-	if s.trafficAPIURL != "" {
+	if !noTraffic && s.trafficAPIURL != "" {
 		var resp struct {
 			Records []apiRecord `json:"records"`
 		}
 		q := url.Values{"window": {"today"}, "group": {"mac"}, "limit": {"1000"}}
-		if err := s.trafficGet(r.Context(), "/api/v1/traffic", q, &resp); err == nil {
+		if err := s.trafficGet(ctx, "/api/v1/traffic", q, &resp); err == nil {
 			trafficOK = true
 			for _, rec := range resp.Records {
 				today[rec.MAC] = rec
 			}
 		}
 	}
-	live := s.fetchLive(r.Context())
+	live := map[string]liveRate{}
+	if !noTraffic {
+		live = s.fetchLive(ctx)
+	}
 	devs := s.state.All()
 	out := make([]adminDeviceEntry, 0, len(devs))
 	for _, d := range devs {
 		t := today[d.MAC]
 		out = append(out, adminDeviceEntry{
-			MAC: d.MAC, IP: primaryIP(d), IPv4s: nonNilStrings(d.IPv4s), IPv6s: nonNilStrings(d.IPv6s),
+			MAC: d.MAC, IP: primaryIP(d), Name: lookupDeviceName(primaryIP(d)),
+			IPv4s: nonNilStrings(d.IPv4s), IPv6s: nonNilStrings(d.IPv6s),
 			Policy: d.Policy, LastSeen: d.LastSeen,
 			Today: t.TotalBytes, TodayUp: t.UploadBytes, TodayDown: t.DownloadBytes,
 			UploadBps: live[d.MAC].UploadBps, DownloadBps: live[d.MAC].DownloadBps,

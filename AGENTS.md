@@ -15,6 +15,9 @@
 | `state.go` | Device state persistence |
 | `device.go` | IP/MAC resolution via ARP/NDP neighbor table |
 | `server.go` | HTTP API + Web UI |
+| `discovery.go` | Passive ARP/NDP neighbour discovery (read-only; no scans) |
+| `traffic_agg.go` | Built-in traffic aggregator on `127.0.0.1:8081` |
+| `probe/traffic.c` | Small router-side tc/eBPF per-MAC probe source |
 | `web/index.html` | Embedded SPA |
 
 ## Architecture
@@ -51,6 +54,22 @@ Triggers are debounced (300 ms). Policy changes write `state` first, then call
 `SetDevicePolicy`, so a concurrent `Sync` never reverts them.
 
 Kernel tests (root, own netns): `go test -c -o /tmp/wlt.test . && sudo unshare -n env WLT_NFT_KERNEL_TEST=1 /tmp/wlt.test -test.run Kernel -test.v`
+
+### Discovery and traffic accounting
+
+`discovery.go` only reads the kernel neighbour table on an interval and inserts
+new MACs with `default_policy`; it never probes ARP/ports. `traffic_agg.go`
+runs inside the wlt process and serves the traffic-count-compatible API on
+`traffic_listen` (loopback by default). Its data sources are configured, not
+hardcoded:
+
+- `traffic_router_url` — router-side eBPF/traffic-count per-MAC totals
+- `traffic_clash_url` — local Clash API connections for sing-box bytes
+- `traffic_account_table` + `traffic_lan_interface` + `traffic_wg_interface` +
+  `traffic_wg4_cidrs`/`traffic_wg6_cidrs` — optional WG counters
+
+The small router-side probe source lives in `probe/traffic.c`; wlt does not
+require clang/libbpf to build.
 
 ## Common Tasks
 

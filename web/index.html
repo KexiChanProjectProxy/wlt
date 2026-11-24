@@ -224,6 +224,7 @@ header.topbar.stuck { background: var(--bar-fill); border-bottom-color: var(--gl
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
 .dot.up { background: var(--up); } .dot.down { background: var(--down); }
 .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.tiles.cats { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 8px; }
 .tile { border-radius: 14px; padding: 10px 12px; min-width: 0; }
 .tile .k { font-size: 12px; color: var(--muted); }
 .tile .v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 2px 0; white-space: nowrap; }
@@ -272,6 +273,7 @@ button:focus-visible, select:focus-visible, .input:focus-visible, input[type=che
 .dev .meta .copy svg { width: 13px; height: 13px; }
 .dev:first-child { border-top-color: transparent; }
 .dev .who { min-width: 0; }
+.dev .name { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
 .dev .ipline { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .dev .ip { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dev .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; display: flex; flex-wrap: wrap; align-items: center; column-gap: 6px; }
@@ -364,7 +366,7 @@ const I18N = {
     resetConns: '切换时断开已有连接，让新线路立即生效',
     switching: '正在切换到「{p}」…', switched: '已切换到「{p}」', failed: '操作失败：',
     traffic: '我的流量', now: '实时', upload: '上传', download: '下载',
-    today: '今天', yesterday: '昨天', week: '近 7 天', month: '本月', last14: '近 14 天', tz: '时区 {z}', prevMonth: '上月 {v}',
+    today: '今天', yesterday: '昨天', week: '近 7 天', month: '本月', last14: '近 14 天', tz: '时区 {z}', prevMonth: '上月 {v}', singbox: 'sing-box', direct: '直连', wg: 'WG',
     trafficOff: '未启用流量统计。', trafficDown: '流量服务暂不可用。', noTrafficYet: '近 14 天暂无流量', stale: '数据未更新',
     trafficUnknown: '无法识别本设备，暂无流量数据。',
     admin: '管理', adminHint: '输入管理密码后可管理所有设备', psk: '管理密码', unlock: '进入', unlocking: '验证中…',
@@ -385,7 +387,7 @@ const I18N = {
     resetConns: 'Reset existing connections so the new route applies immediately',
     switching: 'Switching to “{p}”…', switched: 'Now using “{p}”', failed: 'Failed: ',
     traffic: 'My traffic', now: 'now', upload: 'Upload', download: 'Download',
-    today: 'Today', yesterday: 'Yesterday', week: 'Last 7 days', month: 'This month', last14: 'Last 14 days', tz: 'Time zone {z}', prevMonth: 'Last month {v}',
+    today: 'Today', yesterday: 'Yesterday', week: 'Last 7 days', month: 'This month', last14: 'Last 14 days', tz: 'Time zone {z}', prevMonth: 'Last month {v}', singbox: 'sing-box', direct: 'Direct', wg: 'WG',
     trafficOff: 'Traffic statistics are not enabled.', trafficDown: 'The traffic service is unavailable.', noTrafficYet: 'No traffic in the last 14 days', stale: 'not updating',
     trafficUnknown: 'This device could not be identified, so there is no traffic data.',
     admin: 'Admin', adminHint: 'Enter the admin password to manage every device', psk: 'Admin password', unlock: 'Unlock', unlocking: 'Checking…',
@@ -406,7 +408,7 @@ const I18N = {
     resetConns: '切り替え時に既存の接続をリセットし、新しい回線をすぐに反映する',
     switching: '「{p}」に切り替え中…', switched: '「{p}」に切り替えました', failed: '失敗しました：',
     traffic: '自分のトラフィック', now: '現在', upload: 'アップロード', download: 'ダウンロード',
-    today: '今日', yesterday: '昨日', week: '過去7日間', month: '今月', last14: '過去14日間', tz: 'タイムゾーン {z}', prevMonth: '先月 {v}',
+    today: '今日', yesterday: '昨日', week: '過去7日間', month: '今月', last14: '過去14日間', tz: 'タイムゾーン {z}', prevMonth: '先月 {v}', singbox: 'sing-box', direct: '直接', wg: 'WG',
     trafficOff: 'トラフィック統計は無効です。', trafficDown: 'トラフィックサービスに接続できません。', noTrafficYet: '過去14日間のトラフィックはありません', stale: '更新されていません',
     trafficUnknown: 'このデバイスを識別できないため、トラフィックデータはありません。',
     admin: '管理', adminHint: '管理パスワードを入力すると、すべてのデバイスを管理できます', psk: '管理パスワード', unlock: 'ロック解除', unlocking: '確認中…',
@@ -597,6 +599,7 @@ function trafficBody(tr, key, compact) {
        <div class="speed nest"><div class="k"><i class="dot up" aria-hidden="true"></i>${esc(t('upload'))} · ${esc(t('now'))}</div><div class="v" data-live="up">${rate(lv.upload_bps)}</div></div>
      </div>`) +
     `<div class="tiles">${tile('today', tr.today)}${tile('yesterday', tr.yesterday)}${tile('week', tr.week)}${tile('month', tr.month, prev)}</div>` +
+    (tr.categories ? `<div class="sub" style="margin-top:8px">${esc(t('today'))}</div><div class="tiles cats">${tile('singbox', tr.categories.singbox)}${tile('direct', tr.categories.direct)}${tile('wg', tr.categories.wg)}</div>` : '') +
     chartBlock(key, tr.series);
 }
 
@@ -664,7 +667,7 @@ function deviceRow(d, u, max, rank, trafficOn) {
   const live = `<span class="lv" data-live-mac="${esc(d.mac)}">${liveText(d.mac, u.upBps, u.downBps)}</span>`;
   const seen = d.last_seen !== undefined ? `<span>${esc(t('lastSeen'))} ${esc(ago(d.last_seen))}</span>` : '';
   return `<div class="dev${open ? ' open' : ''}">
-    <div class="who"><div class="ipline">${d.ip ? copyVal(d.ip, 'ip') : copyVal(d.mac, 'ip')}${me ? `<span class="me-tag">${esc(t('me'))}</span>` : ''}</div>
+    <div class="who">${d.name ? `<div class="name">${esc(d.name)}</div>` : ''}<div class="ipline">${d.ip ? copyVal(d.ip, 'ip') : copyVal(d.mac, 'ip')}${me ? `<span class="me-tag">${esc(t('me'))}</span>` : ''}</div>
       <div class="meta">${d.ip ? `<span class="macline">${copyVal(d.mac)}</span>` : ''}${seen}${live}</div></div>
     ${devicePolicySelect(d)}
     <div class="usage">${rank ? `<span class="rank">${rank}</span>` : ''}${trafficOn ? `<div class="bar" aria-hidden="true"><i class="d" style="width:${max ? u.down / max * 100 : 0}%"></i><i class="u" style="width:${max ? u.up / max * 100 : 0}%"></i></div>
@@ -688,7 +691,7 @@ function adminDevices() {
 }
 function filterDevices(all) {
   const q = S.admin.q.trim().toLowerCase();
-  return all.filter(d => !q || [d.ip, d.mac, d.policy, policyLabel(d.policy), ...(d.ipv4s || []), ...(d.ipv6s || [])].join(' ').toLowerCase().includes(q));
+  return all.filter(d => !q || [d.name, d.ip, d.mac, d.policy, policyLabel(d.policy), ...(d.ipv4s || []), ...(d.ipv6s || [])].join(' ').toLowerCase().includes(q));
 }
 
 function renderAdminList() {

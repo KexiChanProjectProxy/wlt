@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -41,7 +43,9 @@ func NewServer(cfg *Config, state *State, nft devicePolicySetter) *Server {
 		state: state,
 		nft:   nft,
 		trafficHTTPClient: &http.Client{
-			Timeout: 5 * time.Second,
+			// The router's SQLite/API can take several seconds for a cold
+			// per-device query.  Policy sync uses traffic=0 and never waits.
+			Timeout: 20 * time.Second,
 		},
 		trafficAPIURL: cfg.TrafficAPIURL,
 	}
@@ -81,9 +85,58 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 type deviceResponse struct {
 	SourceIP string   `json:"source_ip"`
 	MAC      string   `json:"mac"`
+	Name     string   `json:"name,omitempty"`
 	IPv4s    []string `json:"ipv4s"`
 	IPv6s    []string `json:"ipv6s"`
 	Policy   string   `json:"policy"`
+}
+
+type rdnsEntry struct {
+	name    string
+	expires time.Time
+}
+
+var (
+	rdnsCache   sync.Map // IP -> rdnsEntry
+	rdnsPending sync.Map // IP -> struct{} (a background lookup is in flight)
+)
+
+// lookupDeviceName returns the cached reverse-DNS name and refreshes it in the
+// background.  It never blocks: /api/admin/devices is polled by the router
+// every 0.5s, and the upstream resolver can take seconds for a PTR lookup.
+func lookupDeviceName(ip string) string {
+	if ip == "" {
+		return ""
+	}
+	var name string
+	fresh := false
+	if v, ok := rdnsCache.Load(ip); ok {
+		e := v.(rdnsEntry)
+		name = e.name
+		fresh = time.Now().Before(e.expires)
+	}
+	if !fresh {
+		if _, loaded := rdnsPending.LoadOrStore(ip, struct{}{}); !loaded {
+			go resolveDeviceName(ip)
+		}
+	}
+	return name
+}
+
+func resolveDeviceName(ip string) {
+	defer rdnsPending.Delete(ip)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	name := ""
+	names, err := net.DefaultResolver.LookupAddr(ctx, ip)
+	if err == nil && len(names) > 0 {
+		name = strings.TrimSuffix(strings.TrimSpace(names[0]), ".")
+	}
+	ttl := 2 * time.Minute
+	if name != "" {
+		ttl = 30 * time.Minute
+	}
+	rdnsCache.Store(ip, rdnsEntry{name: name, expires: time.Now().Add(ttl)})
 }
 
 type featuresResponse struct {
@@ -148,6 +201,7 @@ func writeError(w http.ResponseWriter, code int, msg string) {
 func devToResponse(dev *DeviceState) deviceResponse {
 	return deviceResponse{
 		MAC:    dev.MAC,
+		Name:   lookupDeviceName(primaryIP(dev)),
 		IPv4s:  dev.IPv4s,
 		IPv6s:  dev.IPv6s,
 		Policy: dev.Policy,
